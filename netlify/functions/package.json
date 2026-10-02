@@ -1,0 +1,8 @@
+{
+  "name": "smart-shopping-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for Smart Shopping Extension",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
