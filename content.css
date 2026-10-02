@@ -1,0 +1,208 @@
+/* content.css — تنسيقات واجهة الإضافة */
+
+#smart-shopping-widget {
+  position: fixed;
+  bottom: 20px;
+  inset-inline-end: 20px;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2), 0 0 0 1px rgba(0,0,0,.05);
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  direction: rtl;
+  z-index: 2147483647;
+  overflow: hidden;
+  animation: sswSlideUp .35s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes sswSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#smart-shopping-widget .ssw-header {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#smart-shopping-widget .ssw-logo {
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#smart-shopping-widget .ssw-close {
+  background: rgba(255,255,255,.2);
+  border: none;
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+#smart-shopping-widget .ssw-close:hover {
+  background: rgba(255,255,255,.35);
+}
+
+#smart-shopping-widget .ssw-body {
+  padding: 16px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* Loading */
+#smart-shopping-widget .ssw-loading {
+  text-align: center;
+  padding: 20px 0;
+}
+
+#smart-shopping-widget .ssw-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 10px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: sswSpin .8s linear infinite;
+}
+
+@keyframes sswSpin {
+  to { transform: rotate(360deg); }
+}
+
+#smart-shopping-widget .ssw-loading p {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Product title */
+#smart-shopping-widget .ssw-product-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 10px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Rows */
+#smart-shopping-widget .ssw-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#smart-shopping-widget .ssw-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  text-decoration: none;
+  color: inherit;
+  transition: all .2s;
+}
+
+#smart-shopping-widget .ssw-row:hover {
+  border-color: #6366f1;
+  transform: translateY(-1px);
+}
+
+#smart-shopping-widget .ssw-row.ssw-best {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  border-color: #22c55e;
+}
+
+#smart-shopping-widget .ssw-row-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#smart-shopping-widget .ssw-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+#smart-shopping-widget .ssw-badge {
+  background: #22c55e;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+#smart-shopping-widget .ssw-price {
+  font-weight: 900;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+/* AI box */
+#smart-shopping-widget .ssw-ai {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border-inline-start: 4px solid #f59e0b;
+  font-size: 12px;
+  color: #78350f;
+  line-height: 1.6;
+}
+
+#smart-shopping-widget .ssw-ai strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #92400e;
+}
+
+#smart-shopping-widget .ssw-ai p {
+  margin: 0;
+}
+
+/* Error */
+#smart-shopping-widget .ssw-error {
+  padding: 16px;
+  text-align: center;
+  color: #991b1b;
+  background: #fef2f2;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* زر التصغير للجوال */
+@media (max-width: 480px) {
+  #smart-shopping-widget {
+    width: calc(100vw - 24px);
+    inset-inline-end: 12px;
+    bottom: 12px;
+  }
+}
