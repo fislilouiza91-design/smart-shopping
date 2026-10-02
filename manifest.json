@@ -1,1 +1,57 @@
-
+{
+  "manifest_version": 3,
+  "name": "مساعد التسوق الذكي",
+  "version": "1.0.0",
+  "description": "قارن الأسعار، حلل المنتجات بالذكاء الاصطناعي، واكشف الكوبونات — تلقائياً على صفحات التسوق.",
+  "default_locale": "ar",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*.amazon.ae/*",
+    "*://*.amazon.sa/*",
+    "*://*.amazon.com/*",
+    "*://*.noon.com/*",
+    "*://*.aliexpress.com/*",
+    "*://*.ebay.com/*",
+    "*://*.temu.com/*",
+    "*://*.mumzworld.com/*",
+    "https://*.netlify.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.amazon.ae/*",
+        "*://*.amazon.sa/*",
+        "*://*.amazon.com/*",
+        "*://*.noon.com/*",
+        "*://*.aliexpress.com/*",
+        "*://*.ebay.com/*",
+        "*://*.temu.com/*",
+        "*://*.mumzworld.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "مساعد التسوق الذكي",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
