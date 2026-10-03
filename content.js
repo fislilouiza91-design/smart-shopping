@@ -1,435 +1,379 @@
-(function () {
-  'use strict';
+/* ============================================
+   Smart Shopping Widget — Clean Design
+   ============================================ */
 
-  const STORAGE_KEY = 'ssw_language';
+#smart-shopping-widget {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --accent: #a855f7;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --dark: #0f172a;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-500: #64748b;
+  --gray-700: #334155;
 
-  // ============================================
-  // Translations
-  // ============================================
-  const translations = {
-    en: {
-      direction: 'ltr',
-      brand: 'Shopping Assistant',
-      loading: 'Comparing prices...',
-      productMeta: (s, o) => `${s} stores · ${o} offers`,
-      cheapest: 'Cheapest',
-      offersCount: (n) => `${n} offers`,
-      allOffers: (store) => `All offers in ${store}`,
-      reviews: (n) => `(${n} reviews)`,
-      aiTitle: '🤖 AI Analysis',
-      aiText: 'Product has good reviews. Hover over any store to see 10+ detailed offers with seller and rating.',
-      errorServer: 'Connection failed. Check your internet.',
-      errorNoResults: 'No results found for this product.',
-      close: 'Close'
-    },
-    ar: {
-      direction: 'rtl',
-      brand: 'مساعد التسوق',
-      loading: 'جاري مقارنة الأسعار...',
-      productMeta: (s, o) => `${s} متاجر · ${o} عرض متاح`,
-      cheapest: 'الأرخص',
-      offersCount: (n) => `${n} عرض`,
-      allOffers: (store) => `جميع العروض في ${store}`,
-      reviews: (n) => `(${n} مراجعة)`,
-      aiTitle: '🤖 تحليل ذكي',
-      aiText: 'منتج بتقييم جيد. حوّم على أي متجر لعرض 10 عروض مفصلة مع البائع والتقييم.',
-      errorServer: 'تعذر الاتصال بالخادم. تحقق من الإنترنت.',
-      errorNoResults: 'لم نجد نتائج لهذا المنتج.',
-      close: 'إغلاق'
-    },
-    fr: {
-      direction: 'ltr',
-      brand: 'Assistant Shopping',
-      loading: 'Comparaison des prix...',
-      productMeta: (s, o) => `${s} magasins · ${o} offres`,
-      cheapest: 'Moins cher',
-      offersCount: (n) => `${n} offres`,
-      allOffers: (store) => `Toutes les offres chez ${store}`,
-      reviews: (n) => `(${n} avis)`,
-      aiTitle: '🤖 Analyse IA',
-      aiText: 'Produit bien noté. Survolez un magasin pour voir 10+ offres avec vendeur et note.',
-      errorServer: 'Connexion échouée. Vérifiez votre internet.',
-      errorNoResults: 'Aucun résultat pour ce produit.',
-      close: 'Fermer'
-    },
-    es: {
-      direction: 'ltr',
-      brand: 'Asistente de Compras',
-      loading: 'Comparando precios...',
-      productMeta: (s, o) => `${s} tiendas · ${o} ofertas`,
-      cheapest: 'Más barato',
-      offersCount: (n) => `${n} ofertas`,
-      allOffers: (store) => `Todas las ofertas en ${store}`,
-      reviews: (n) => `(${n} reseñas)`,
-      aiTitle: '🤖 Análisis IA',
-      aiText: 'Producto bien valorado. Pasa el cursor sobre una tienda para ver 10+ ofertas.',
-      errorServer: 'Conexión fallida. Verifica tu internet.',
-      errorNoResults: 'No hay resultados para este producto.',
-      close: 'Cerrar'
-    },
-    de: {
-      direction: 'ltr',
-      brand: 'Einkaufsassistent',
-      loading: 'Preise werden verglichen...',
-      productMeta: (s, o) => `${s} Geschäfte · ${o} Angebote`,
-      cheapest: 'Günstigster',
-      offersCount: (n) => `${n} Angebote`,
-      allOffers: (store) => `Alle Angebote bei ${store}`,
-      reviews: (n) => `(${n} Bewertungen)`,
-      aiTitle: '🤖 KI-Analyse',
-      aiText: 'Gut bewertetes Produkt. Fahren Sie über ein Geschäft für 10+ Angebote.',
-      errorServer: 'Verbindung fehlgeschlagen. Prüfen Sie Ihr Internet.',
-      errorNoResults: 'Keine Ergebnisse für dieses Produkt.',
-      close: 'Schließen'
-    }
-  };
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 360px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  z-index: 2147483647;
+  animation: sswIn 0.35s ease;
+  overflow: visible;
+}
 
-  // ============================================
-  // Detect Chrome language (fallback)
-  // ============================================
-  function detectChromeLanguage() {
-    let lang = '';
-    try {
-      if (chrome.i18n && chrome.i18n.getUILanguage) {
-        lang = chrome.i18n.getUILanguage();
-      }
-    } catch (e) { }
-    if (!lang) lang = navigator.language || 'en';
-    const base = lang.toLowerCase().split('-')[0];
-    return translations[base] ? base : 'en';
-  }
+#smart-shopping-widget[dir="rtl"] {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  right: auto;
+  left: 20px;
+}
 
-  // ============================================
-  // Get effective language (async)
-  // ============================================
-  function getEffectiveLanguage() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get([STORAGE_KEY], (result) => {
-        if (result[STORAGE_KEY] && translations[result[STORAGE_KEY]]) {
-          resolve(result[STORAGE_KEY]);
-        } else {
-          resolve(detectChromeLanguage());
-        }
-      });
-    });
-  }
+@keyframes sswIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-  // ============================================
-  // Store detection
-  // ============================================
-  function detectStore() {
-    const host = location.hostname.toLowerCase();
-    if (host.includes('amazon.')) return 'amazon';
-    if (host.includes('noon.')) return 'noon';
-    if (host.includes('aliexpress.')) return 'aliexpress';
-    if (host.includes('ebay.')) return 'ebay';
-    if (host.includes('temu.')) return 'temu';
-    if (host.includes('mumzworld.')) return 'mumzworld';
-    return null;
-  }
+/* ===== Header (Draggable) ===== */
+#smart-shopping-widget .ssw-header {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 16px 16px 0 0;
+  cursor: grab;
+  user-select: none;
+}
 
-  // ============================================
-  // Product data
-  // ============================================
-  function getProductData() {
-    const store = detectStore();
-    if (!store) return null;
+#smart-shopping-widget .ssw-header:active {
+  cursor: grabbing;
+}
 
-    const selectors = {
-      amazon: {
-        title: ['#productTitle', 'h1#title', '[data-feature-name="title"] h1'],
-        price: ['.a-price-whole', '#priceblock_ourprice', '.a-price .a-offscreen', '#price_inside_buybox']
-      },
-      noon: {
-        title: ['h1[data-qa="product-title"]', '.productTitle', 'h1.productTitle'],
-        price: ['[data-qa="price-now"]', '.priceNow', '.price']
-      },
-      aliexpress: {
-        title: ['h1[data-pl="product-title"]', '.product-title-text', 'h1.product-title'],
-        price: ['.product-price-value', '.es--wrap--erdmPRe span', '.price--currentPriceText--V8_y_b5']
-      },
-      ebay: {
-        title: ['.x-item-title__mainTitle .ux-textspans', 'h1.it-ttl'],
-        price: ['.x-price-primary .ux-textspans', '#prcIsum']
-      },
-      temu: {
-        title: ['h1[class*="title"]', '._2rn4tqXP h1'],
-        price: ['[class*="price"] span', '._2rn4tqXP [class*="price"]']
-      },
-      mumzworld: {
-        title: ['h1.product-name', '.page-title h1'],
-        price: ['.product-info-main .price', '[data-price-type="finalPrice"]']
-      }
-    };
+#smart-shopping-widget .ssw-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 14px;
+}
 
-    function tryList(list) {
-      for (const sel of list) {
-        try {
-          const el = document.querySelector(sel);
-          if (el && el.textContent.trim()) return el.textContent.trim();
-        } catch (e) { }
-      }
-      return null;
-    }
+#smart-shopping-widget .ssw-brand-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
 
-    const title = tryList(selectors[store].title);
-    const price = tryList(selectors[store].price);
-    if (!title) return null;
+#smart-shopping-widget .ssw-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
 
-    return { store, title, price, url: location.href };
-  }
+#smart-shopping-widget .ssw-close:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
 
-  // ============================================
-  // Offers simulation
-  // ============================================
-  function generateOffers(store, basePrice) {
-    const sellers = {
-      temu: ['Temu Official', 'Top Store', 'Mega Deals', 'Global Shop', 'Best Buy', 'Premium Store', 'Smart Shop', 'Fast Delivery', 'Value Store', 'Elite Seller'],
-      noon: ['Noon Express', 'Noon Mart', 'Official Store', 'Prime Seller', 'Best Choice', 'Top Rated', 'Mega Store', 'Global Mart', 'Value Shop', 'Elite Vendor'],
-      amazon: ['Amazon.ae', 'Amazon Warehouse', 'Sold by ABC', 'Sold by XYZ', 'Best Seller', 'Prime Store', 'Top Vendor', 'Mega Mart', 'Value Shop', 'Premium Seller'],
-      aliexpress: ['Official Store', 'Top Seller', 'Gold Supplier', 'Verified Store', 'Trusted Shop', 'Elite Vendor', 'Mega Factory', 'Direct Store', 'Premium Shop', 'Best Choice'],
-      ebay: ['Top Rated Seller', 'eBay Official', 'Gold Seller', 'Premium Store', 'Trusted Vendor', 'Mega Deals', 'Best Offer', 'Global Seller', 'Value Shop', 'Elite Store'],
-      mumzworld: ['Mumzworld', 'Official Store', 'Top Seller', 'Premium Shop', 'Best Choice', 'Trusted Vendor', 'Mega Store', 'Value Shop', 'Elite Seller', 'Direct Store']
-    };
+/* ===== Body ===== */
+#smart-shopping-widget .ssw-body {
+  padding: 12px;
+  max-height: 500px;
+  overflow-y: auto;
+  border-radius: 0 0 16px 16px;
+}
 
-    const list = sellers[store] || sellers.amazon;
-    const count = 10 + Math.floor(Math.random() * 4);
+#smart-shopping-widget .ssw-body::-webkit-scrollbar {
+  width: 6px;
+}
 
-    return Array.from({ length: count }, (_, i) => {
-      const variation = 1 + (i * 0.015) + (Math.random() * 0.03);
-      const price = Math.round(basePrice * variation * 100) / 100;
-      const rating = (3.8 + Math.random() * 1.2).toFixed(1);
-      const reviews = Math.floor(50 + Math.random() * 2000);
-      return { seller: list[i % list.length], price, rating, reviews };
-    }).sort((a, b) => a.price - b.price);
-  }
+#smart-shopping-widget .ssw-body::-webkit-scrollbar-thumb {
+  background: var(--gray-200);
+  border-radius: 3px;
+}
 
-  // ============================================
-  // UI
-  // ============================================
-  function createUI(T) {
-    const old = document.getElementById('smart-shopping-widget');
-    if (old) old.remove();
+/* ===== Loading ===== */
+#smart-shopping-widget .ssw-loading {
+  text-align: center;
+  padding: 30px 20px;
+}
 
-    const box = document.createElement('div');
-    box.id = 'smart-shopping-widget';
-    box.setAttribute('dir', T.direction);
+#smart-shopping-widget .ssw-spinner {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 12px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: sswSpin 0.9s linear infinite;
+}
 
-    const savedPos = JSON.parse(localStorage.getItem('ssw_position') || 'null');
-    if (savedPos) {
-      box.style.bottom = 'auto';
-      box.style.top = savedPos.top + 'px';
-      box.style.insetInlineEnd = 'auto';
-      box.style.insetInlineStart = savedPos.left + 'px';
-    }
+@keyframes sswSpin {
+  to { transform: rotate(360deg); }
+}
 
-    box.innerHTML = `
-      <div class="ssw-header" id="sswHeader">
-        <div class="ssw-brand">
-          <div class="ssw-brand-icon">🛒</div>
-          <div class="ssw-brand-text">${T.brand}</div>
-        </div>
-        <button class="ssw-close" aria-label="${T.close}">✕</button>
-      </div>
-      <div class="ssw-body">
-        <div class="ssw-loading">
-          <div class="ssw-spinner"></div>
-          <p class="ssw-loading-text">${T.loading}</p>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(box);
+#smart-shopping-widget .ssw-loading-text {
+  color: var(--gray-500);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
 
-    box.querySelector('.ssw-close').addEventListener('click', () => box.remove());
-    makeDraggable(box, box.querySelector('#sswHeader'));
+/* ===== Product Header ===== */
+#smart-shopping-widget .ssw-product {
+  padding: 10px 12px;
+  background: var(--gray-50);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
 
-    return box;
-  }
+#smart-shopping-widget .ssw-product-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1.4;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
-  function makeDraggable(el, handle) {
-    let isDragging = false, startX, startY, startLeft, startTop;
+#smart-shopping-widget .ssw-product-meta {
+  font-size: 10.5px;
+  color: var(--gray-500);
+  font-weight: 600;
+}
 
-    handle.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.ssw-close')) return;
-      isDragging = true;
-      const rect = el.getBoundingClientRect();
-      startX = e.clientX; startY = e.clientY;
-      startLeft = rect.left; startTop = rect.top;
-      el.style.transition = 'none';
-      document.body.style.userSelect = 'none';
-      e.preventDefault();
-    });
+/* ===== Store Rows ===== */
+#smart-shopping-widget .ssw-store {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
 
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const dx = e.clientX - startX, dy = e.clientY - startY;
-      const nl = Math.max(0, Math.min(startLeft + dx, window.innerWidth - el.offsetWidth));
-      const nt = Math.max(0, Math.min(startTop + dy, window.innerHeight - el.offsetHeight));
-      el.style.bottom = 'auto';
-      el.style.insetInlineEnd = 'auto';
-      el.style.insetInlineStart = nl + 'px';
-      el.style.top = nt + 'px';
-    });
+#smart-shopping-widget .ssw-store:hover {
+  border-color: var(--primary);
+  background: #f8f7ff;
+}
 
-    document.addEventListener('mouseup', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      el.style.transition = '';
-      document.body.style.userSelect = '';
-      const rect = el.getBoundingClientRect();
-      localStorage.setItem('ssw_position', JSON.stringify({ left: rect.left, top: rect.top }));
-    });
+#smart-shopping-widget .ssw-store.ssw-best {
+  border-color: var(--success);
+  background: #f0fdf4;
+}
 
-    handle.addEventListener('touchstart', (e) => {
-      if (e.target.closest('.ssw-close')) return;
-      const t = e.touches[0];
-      const rect = el.getBoundingClientRect();
-      startX = t.clientX; startY = t.clientY;
-      startLeft = rect.left; startTop = rect.top;
-      isDragging = true;
-    }, { passive: true });
+#smart-shopping-widget .ssw-store-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
 
-    document.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-      const t = e.touches[0];
-      const dx = t.clientX - startX, dy = t.clientY - startY;
-      const nl = Math.max(0, Math.min(startLeft + dx, window.innerWidth - el.offsetWidth));
-      const nt = Math.max(0, Math.min(startTop + dy, window.innerHeight - el.offsetHeight));
-      el.style.bottom = 'auto';
-      el.style.insetInlineEnd = 'auto';
-      el.style.insetInlineStart = nl + 'px';
-      el.style.top = nt + 'px';
-    }, { passive: true });
+#smart-shopping-widget .ssw-store-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
 
-    document.addEventListener('touchend', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      const rect = el.getBoundingClientRect();
-      localStorage.setItem('ssw_position', JSON.stringify({ left: rect.left, top: rect.top }));
-    });
-  }
+#smart-shopping-widget .ssw-store-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  // ============================================
-  // Render
-  // ============================================
-  function renderResults(box, data, T) {
-    const results = data.results || [];
-    if (!results.length) {
-      box.querySelector('.ssw-body').innerHTML =
-        `<div class="ssw-error">${T.errorNoResults}</div>`;
-      return;
-    }
+#smart-shopping-widget .ssw-badge {
+  background: var(--success);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
 
-    const storesWithOffers = results.map((r, index) => {
-      const offers = generateOffers(r.store, r.price);
-      return { ...r, offers, count: offers.length, isCheapest: index === 0 };
-    });
+#smart-shopping-widget .ssw-store-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 
-    const totalOffers = storesWithOffers.reduce((s, x) => s + x.count, 0);
+#smart-shopping-widget .ssw-store-price {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--dark);
+  white-space: nowrap;
+}
 
-    const storesHTML = storesWithOffers.map((s) => `
-      <div class="ssw-store-wrap" data-store="${s.store}">
-        <div class="ssw-store ${s.isCheapest ? 'ssw-best' : ''}">
-          <div class="ssw-store-left">
-            <span class="ssw-store-icon" style="background:${s.bg}">${s.icon}</span>
-            <span>${s.name}</span>
-            ${s.isCheapest ? `<span class="ssw-badge">${T.cheapest}</span>` : ''}
-          </div>
-          <div class="ssw-store-right">
-            <span class="ssw-store-count">${T.offersCount(s.count)}</span>
-            <span class="ssw-store-price">${s.price} ${s.currency || '$'}</span>
-          </div>
-        </div>
-        <div class="ssw-offers">
-          <div class="ssw-offers-header">${T.allOffers(s.name)}</div>
-          ${s.offers.map(o => `
-            <a class="ssw-offer" href="${s.url}" target="_blank" rel="noopener">
-              <div class="ssw-offer-info">
-                <span class="ssw-offer-seller">${o.seller}</span>
-                <span class="ssw-offer-meta">
-                  <span class="ssw-offer-stars">★ ${o.rating}</span>
-                  <span>${T.reviews(o.reviews)}</span>
-                </span>
-              </div>
-              <span class="ssw-offer-price">${o.price} ${s.currency || '$'}</span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    `).join('');
+#smart-shopping-widget .ssw-store-count {
+  background: var(--gray-100);
+  color: var(--gray-500);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+}
 
-    box.querySelector('.ssw-body').innerHTML = `
-      <div class="ssw-product">
-        <div class="ssw-product-icon">📦</div>
-        <div class="ssw-product-info">
-          <div class="ssw-product-name">${data.product}</div>
-          <div class="ssw-product-meta">${T.productMeta(storesWithOffers.length, totalOffers)}</div>
-        </div>
-      </div>
-      <div class="ssw-stores">${storesHTML}</div>
-      <div class="ssw-ai">
-        <div class="ssw-ai-title">${T.aiTitle}</div>
-        <p class="ssw-ai-text">${T.aiText}</p>
-      </div>
-    `;
+/* ===== Offers Dropdown (absolute overlay) ===== */
+#smart-shopping-widget .ssw-offers {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid var(--primary);
+  border-radius: 12px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  z-index: 50;
+  max-height: 260px;
+  overflow-y: auto;
+  display: none;
+}
 
-    box.querySelectorAll('.ssw-store-wrap').forEach(wrap => {
-      const store = wrap.querySelector('.ssw-store');
-      store.addEventListener('click', (e) => {
-        if (window.matchMedia('(hover: none)').matches) {
-          e.preventDefault();
-          const isOpen = wrap.classList.contains('ssw-open');
-          box.querySelectorAll('.ssw-store-wrap').forEach(w => w.classList.remove('ssw-open'));
-          if (!isOpen) wrap.classList.add('ssw-open');
-        }
-      });
-    });
-  }
+#smart-shopping-widget .ssw-store.ssw-open .ssw-offers,
+#smart-shopping-widget .ssw-store:hover .ssw-offers {
+  display: block;
+}
 
-  // ============================================
-  // Run
-  // ============================================
-  async function run() {
-    const product = getProductData();
-    if (!product) return;
+#smart-shopping-widget .ssw-offers::-webkit-scrollbar {
+  width: 5px;
+}
 
-    const lang = await getEffectiveLanguage();
-    const T = translations[lang];
+#smart-shopping-widget .ssw-offers::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 3px;
+}
 
-    const box = createUI(T);
-    box.dataset.lang = lang;
+#smart-shopping-widget .ssw-offers-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 6px 8px;
+  border-bottom: 1px solid var(--gray-100);
+  margin-bottom: 6px;
+}
 
-    chrome.runtime.sendMessage(
-      { action: 'compare', payload: product },
-      (response) => {
-        if (chrome.runtime.lastError || !response || !response.success) {
-          box.querySelector('.ssw-body').innerHTML =
-            `<div class="ssw-error">${T.errorServer}</div>`;
-          return;
-        }
-        renderResults(box, response.data, T);
-      }
-    );
-  }
+#smart-shopping-widget .ssw-offer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
 
-  // ============================================
-  // Storage change listener (update on language switch)
-  // ============================================
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes[STORAGE_KEY]) {
-      const newLang = changes[STORAGE_KEY].newValue;
-      const box = document.getElementById('smart-shopping-widget');
-      if (box && translations[newLang] && box.dataset.lang !== newLang) {
-        // إعادة تشغيل الواجهة باللغة الجديدة
-        box.remove();
-        run();
-      }
-    }
-  });
+#smart-shopping-widget .ssw-offer:hover {
+  background: var(--gray-50);
+}
 
-  if (document.readyState === 'complete') {
-    setTimeout(run, 1000);
-  } else {
-    window.addEventListener('load', () => setTimeout(run, 1000));
-  }
-})();
+#smart-shopping-widget .ssw-offer-left {
+  min-width: 0;
+  flex: 1;
+}
+
+#smart-shopping-widget .ssw-offer-seller {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--dark);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#smart-shopping-widget .ssw-offer-meta {
+  font-size: 10px;
+  color: var(--gray-500);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+#smart-shopping-widget .ssw-offer-stars {
+  color: #f59e0b;
+}
+
+#smart-shopping-widget .ssw-offer-price {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: var(--primary-dark);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ===== AI ===== */
+#smart-shopping-widget .ssw-ai {
+  background: #fef3c7;
+  border-left: 3px solid var(--warning);
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #78350f;
+  line-height: 1.6;
+}
+
+#smart-shopping-widget[dir="rtl"] .ssw-ai {
+  border-left: none;
+  border-right: 3px solid var(--warning);
+}
+
+#smart-shopping-widget .ssw-ai-title {
+  font-weight: 800;
+  margin-bottom: 4px;
+  font-size: 11.5px;
+}
+
+/* ===== Error ===== */
+#smart-shopping-widget .ssw-error {
+  padding: 20px;
+  text-align: center;
+  color: #991b1b;
+  background: #fef2f2;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
