@@ -1,21 +1,32 @@
 // background.js — Service Worker
+// يعمل في الخلفية ويستدعي Netlify Function للمقارنة
 
-const API_URL = 'https://stellar-pithivier-10424a.netlify.app/.netlify/functions/compare';
+const API_URL = 'https://tranquil-dodol-bf4a7b.netlify.app/.netlify/functions/compare';
 
+// ===== استقبال الرسائل من content.js =====
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'compare') {
     handleCompare(message.payload)
       .then(data => sendResponse({ success: true, data }))
-      .catch(err => sendResponse({ success: false, error: err.message }));
-    return true; // async
+      .catch(err => {
+        console.error('Compare error:', err);
+        sendResponse({ success: false, error: err.message });
+      });
+    return true; // يُبقي القناة مفتوحة للرد غير المتزامن
   }
 });
 
+// ===== استدعاء الدالة السحابية =====
 async function handleCompare(product) {
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: product.url, title: product.title })
+    body: JSON.stringify({
+      url: product.url,
+      title: product.title,
+      price: product.price,
+      store: product.store
+    })
   });
 
   if (!response.ok) {
@@ -24,3 +35,10 @@ async function handleCompare(product) {
 
   return await response.json();
 }
+
+// ===== رسالة عند التثبيت (اختياري) =====
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    console.log('✅ تم تثبيت مساعد التسوق الذكي');
+  }
+});
