@@ -113,11 +113,56 @@
   }
 
   // ============================================
-  // Product data detection (Enhanced)
+  // URL pattern check (product page only)
+  // ============================================
+  function isProductUrl(store) {
+    const url = location.href.toLowerCase();
+    const path = location.pathname.toLowerCase();
+
+    // استبعاد صفحات البحث والفئات
+    const excludePatterns = [
+      '/s?', '/search', '?q=', '&q=', '/category/', '/catalog/',
+      '/w/wholesale', '/browse/', '/collection/', '/c/', '/store/',
+      '/brand/', '/seller/', '/user/', '/deals', '/offers', '?page=',
+      '/cart', '/checkout', '/account', '/login', '/signup'
+    ];
+    for (const p of excludePatterns) {
+      if (url.includes(p)) {
+        console.log('[Smart Shopping] Excluded by pattern:', p);
+        return false;
+      }
+    }
+
+    // أنماط صفحات المنتج لكل متجر
+    const productPatterns = {
+      amazon: [/\/dp\//, /\/gp\/product\//, /\/product\//, /\/ASIN\//],
+      noon: [/\/p\//, /\/product\//, /\/[a-z0-9-]+\/N[A-Z0-9]+/i],
+      aliexpress: [/\/item\//, /\/i\/\d+/],
+      ebay: [/\/itm\//, /\/p\/\d+/],
+      temu: [/\/g\//, /\/goods/, /-g-\d+/, /\/product/],
+      mumzworld: [/\/[a-z0-9-]+\.html$/, /\/product\//, /\/p\//]
+    };
+
+    const patterns = productPatterns[store] || [];
+    for (const regex of patterns) {
+      if (regex.test(path) || regex.test(url)) {
+        return true;
+      }
+    }
+
+    console.log('[Smart Shopping] URL does not match product pattern for', store);
+    return false;
+  }
+
+  // ============================================
+  // Product data detection
   // ============================================
   function getProductData() {
     const store = detectStore();
     if (!store) return null;
+
+    // ✅ فحص 1: يجب أن يكون URL صفحة منتج
+    if (!isProductUrl(store)) return null;
 
     const selectors = {
       amazon: {
@@ -235,15 +280,23 @@
     let title = tryList(selectors[store].title);
     let price = tryList(selectors[store].price);
 
-    if (!title) title = tryGenericTitle();
-    if (!price) price = tryGenericPrice();
-
-    if (!title) {
-      console.log('[Smart Shopping] Could not find product title on', location.href);
+    // ✅ فحص 2: يجب أن يوجد سعر (شرط أساسي لصفحة منتج)
+    if (!price) {
+      console.log('[Smart Shopping] No price found on', location.href);
       return null;
     }
 
-    console.log('[Smart Shopping] Detected:', { store, title, price });
+    // إذا فشل العنوان، استخدم og:title
+    if (!title) {
+      title = tryGenericTitle();
+    }
+
+    if (!title) {
+      console.log('[Smart Shopping] Could not find product title');
+      return null;
+    }
+
+    console.log('[Smart Shopping] ✅ Detected:', { store, title, price });
     return { store, title, price, url: location.href };
   }
 
@@ -252,46 +305,11 @@
     if (ogTitle && ogTitle.content && ogTitle.content.length > 3) {
       return ogTitle.content.trim();
     }
-    const h1s = document.querySelectorAll('h1');
-    for (const h1 of h1s) {
-      const text = h1.textContent.trim();
-      if (text.length > 5 && text.length < 300) {
-        if (!h1.closest('header') && !h1.closest('nav')) {
-          return text;
-        }
-      }
-    }
-    const docTitle = document.title;
-    if (docTitle && docTitle.length > 3) {
-      return docTitle.split('|')[0].split(' - ')[0].trim();
-    }
-    return null;
-  }
-
-  function tryGenericPrice() {
-    const priceMeta = document.querySelector('[itemprop="price"]');
-    if (priceMeta) {
-      const content = priceMeta.getAttribute('content') || priceMeta.textContent;
-      if (content && /\d/.test(content)) return content.trim();
-    }
-
-    const priceRegex = /[\$€£¥₹]?\s?\d{1,3}(?:[.,]\d{2,3})?(?:\s?(?:USD|EUR|GBP|AED|SAR|DZD|MAD|EGP))?/;
-
-    const candidates = document.querySelectorAll(
-      '[class*="price" i], [class*="Price"], [id*="price" i], [data-price], [class*="amount"]'
-    );
-
-    for (const el of candidates) {
-      const text = el.textContent.trim();
-      if (text.length < 50 && priceRegex.test(text) && /\d/.test(text)) {
-        return text;
-      }
-    }
     return null;
   }
 
   // ============================================
-  // Generate offers (simulated)
+  // Generate offers
   // ============================================
   function generateOffers(store, basePrice) {
     const sellers = {
@@ -358,7 +376,7 @@
   }
 
   // ============================================
-  // Drag & Drop (Fixed - all directions)
+  // Drag & Drop
   // ============================================
   function makeDraggable(el, handle) {
     let isDragging = false;
@@ -502,7 +520,10 @@
   // ============================================
   async function run() {
     const product = getProductData();
-    if (!product) return;
+    if (!product) {
+      console.log('[Smart Shopping] Skipped: not a product page');
+      return;
+    }
 
     const lang = await getEffectiveLanguage();
     const T = translations[lang];
@@ -534,8 +555,8 @@
   });
 
   if (document.readyState === 'complete') {
-    setTimeout(run, 1000);
+    setTimeout(run, 1500);
   } else {
-    window.addEventListener('load', () => setTimeout(run, 1000));
+    window.addEventListener('load', () => setTimeout(run, 1500));
   }
 })();
