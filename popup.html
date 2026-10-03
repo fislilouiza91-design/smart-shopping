@@ -1,84 +1,347 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
-<title>مساعد التسوق الذكي</title>
+<title>Shopping Assistant</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --accent: #a855f7;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --dark: #0f172a;
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-500: #64748b;
+    --gray-700: #334155;
+  }
+  
   body {
-    width: 320px;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
+    width: 360px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background: #fff;
-    color: #0f172a;
-  }
-  .header {
-    background: linear-gradient(135deg, #6366f1, #a855f7);
-    color: #fff;
-    padding: 16px;
-    text-align: center;
-  }
-  .header h1 { font-size: 16px; font-weight: 800; }
-  .header p { font-size: 11px; opacity: .9; margin-top: 4px; }
-  .body { padding: 16px; }
-  .tip {
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 12px;
-    color: #64748b;
+    color: var(--dark);
     line-height: 1.6;
-    text-align: center;
   }
-  .tip strong { color: #6366f1; display: block; margin-bottom: 6px; font-size: 13px; }
-  .stores {
+
+  body[dir="rtl"] {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #fff;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    background: rgba(255,255,255,.1);
+    border-radius: 50%;
+    top: -60px;
+    inset-inline-end: -40px;
+  }
+  .header-inner {
+    position: relative;
+    z-index: 1;
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 12px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.2);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
     justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
   }
-  .stores span {
-    background: #f1f5f9;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 11px;
+  .header-title {
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 2px;
+  }
+  .header-sub {
+    font-size: 11.5px;
+    opacity: .9;
+  }
+
+  /* ===== Language Selector ===== */
+  .lang-selector-wrap {
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+  }
+  .lang-selector {
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    border: 1.5px solid rgba(255,255,255,.3);
+    border-radius: 10px;
+    padding: 6px 26px 6px 10px;
+    font-size: 12px;
     font-weight: 700;
-    color: #475569;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: all .2s;
+    direction: ltr;
   }
-  .footer {
-    border-top: 1px solid #e2e8f0;
-    padding: 10px 16px;
-    text-align: center;
+  .lang-selector:hover {
+    background: rgba(255,255,255,.3);
+  }
+  .lang-selector option {
+    color: #333;
+    background: #fff;
+    font-weight: 600;
+  }
+  .lang-selector-wrap::after {
+    content: '▾';
+    position: absolute;
+    inset-inline-end: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
     font-size: 10px;
-    color: #94a3b8;
+    pointer-events: none;
   }
-  .footer a { color: #6366f1; text-decoration: none; }
+  body[dir="rtl"] .lang-selector {
+    padding: 6px 10px 6px 26px;
+  }
+  body[dir="rtl"] .lang-selector-wrap::after {
+    inset-inline-end: auto;
+    inset-inline-start: 8px;
+  }
+
+  /* ===== Status ===== */
+  .status {
+    padding: 12px 20px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 4px rgba(34,197,94,.2);
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+  }
+  .status-text {
+    font-size: 12px;
+    color: var(--gray-700);
+    font-weight: 600;
+  }
+
+  /* ===== Body ===== */
+  .body { padding: 18px 20px; }
+
+  .tip {
+    background: linear-gradient(135deg, #eef2ff, #faf5ff);
+    border: 1.5px solid #ddd6fe;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .tip-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .tip-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--primary-dark);
+    margin-bottom: 6px;
+  }
+  .tip-text {
+    font-size: 12px;
+    color: var(--gray-700);
+    line-height: 1.65;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+
+  /* ===== Stores ===== */
+  .stores {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .store {
+    background: var(--gray-50);
+    border: 1.5px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 12px 6px;
+    text-align: center;
+    transition: all .2s;
+  }
+  .store:hover {
+    border-color: var(--primary);
+    background: #eef2ff;
+    transform: translateY(-2px);
+  }
+  .store-icon {
+    font-size: 22px;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .store-name {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--gray-700);
+  }
+
+  /* ===== Features ===== */
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .feature {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--gray-50);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+  }
+  .feature-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ===== Footer ===== */
+  .footer {
+    border-top: 1px solid var(--gray-200);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--gray-50);
+  }
+  .footer-link {
+    font-size: 11px;
+    color: var(--gray-500);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color .2s;
+  }
+  .footer-link:hover { color: var(--primary); }
+  .footer-version {
+    font-size: 10px;
+    color: var(--gray-500);
+  }
 </style>
 </head>
 <body>
+
   <div class="header">
-    <h1>🛒 مساعد التسوق الذكي</h1>
-    <p>قارن، حلل، ووفّر</p>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo-mark">🛒</div>
+        <div>
+          <div class="header-title" id="headerTitle">Shopping Assistant</div>
+          <div class="header-sub" id="headerSub">Compare, Analyze, Save</div>
+        </div>
+      </div>
+      <div class="lang-selector-wrap">
+        <select class="lang-selector" id="langSelector">
+          <option value="en">EN</option>
+          <option value="ar">AR</option>
+          <option value="fr">FR</option>
+          <option value="es">ES</option>
+          <option value="de">DE</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="status">
+    <span class="status-dot"></span>
+    <span class="status-text" id="statusText">Extension is active</span>
   </div>
 
   <div class="body">
+
     <div class="tip">
-      <strong>افتح أي صفحة منتج</strong>
-      ستظهر لك المقارنة تلقائياً على الصفحة.
+      <span class="tip-icon">💡</span>
+      <div class="tip-title" id="tipTitle">How to use?</div>
+      <div class="tip-text" id="tipText">
+        Open any product page on supported stores. The comparison will appear automatically with AI analysis and best prices.
+      </div>
     </div>
 
+    <div class="section-label" id="storesLabel">Supported Stores</div>
     <div class="stores">
-      <span>🛍️ نون</span>
-      <span>📦 أمازون</span>
-      <span>🚀 علي إكسبريس</span>
-      <span>🏷️ إيباي</span>
-      <span>🎁 تيمو</span>
+      <div class="store"><span class="store-icon">🛍️</span><span class="store-name">Noon</span></div>
+      <div class="store"><span class="store-icon">📦</span><span class="store-name">Amazon</span></div>
+      <div class="store"><span class="store-icon">🚀</span><span class="store-name">AliExpress</span></div>
+      <div class="store"><span class="store-icon">🏷️</span><span class="store-name">eBay</span></div>
+      <div class="store"><span class="store-icon">🎁</span><span class="store-name">Temu</span></div>
+      <div class="store"><span class="store-icon">🍼</span><span class="store-name">Mumzworld</span></div>
     </div>
+
+    <div class="section-label" id="featuresLabel">Features</div>
+    <div class="features">
+      <div class="feature"><div class="feature-icon">💰</div><span id="feature1">Instant price comparison</span></div>
+      <div class="feature"><div class="feature-icon">🤖</div><span id="feature2">AI product analysis</span></div>
+      <div class="feature"><div class="feature-icon">🎟️</div><span id="feature3">Coupon detection</span></div>
+    </div>
+
   </div>
 
   <div class="footer">
-    <a href="#" id="privacyLink">سياسة الخصوصية</a>
+    <a href="#" class="footer-link" id="privacyLink">Privacy Policy</a>
+    <span class="footer-version" id="version">Version 1.0.0</span>
   </div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
