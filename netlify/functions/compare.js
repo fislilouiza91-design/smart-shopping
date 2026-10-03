@@ -1,3 +1,6 @@
+// netlify/functions/compare.js
+const fetch = require('node-fetch');
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
@@ -20,25 +23,60 @@ exports.handler = async (event) => {
   try {
     const { url, title } = JSON.parse(event.body);
 
-    if (!url) {
+    if (!title) {
       return {
         statusCode: 400,
         headers: CORS_HEADERS,
-        body: JSON.stringify({ error: 'URL is required' })
+        body: JSON.stringify({ error: 'Product title is required' })
       };
     }
 
-    const sourceStore = detectStore(url);
-    const productName = title || extractProductName(url);
-    const results = await searchProduct(productName, sourceStore);
+    const SERPER_KEY = process.env.SERPER_API_KEY;
+
+    // استدعاء Serper API للبحث في Google Shopping
+    const serperResponse = await fetch('https://google.serper.dev/shopping', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': SERPER_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: title,
+        gl: 'ae',
+        hl: 'en',
+        num: 40
+      })
+    });
+
+    if (!serperResponse.ok) {
+      throw new Error('Serper API error: ' + serperResponse.status);
+    }
+
+    const serperData = await serperResponse.json();
+    const shoppingResults = serperData.shopping || [];
+
+    // تحويل النتائج إلى التنسيق المطلوب
+    const results = shoppingResults.map(item => ({
+      name: item.source || 'Store',
+      icon: getStoreIcon(item.source),
+      bg: getStoreBg(item.source),
+      price: item.price ? parseFloat(item.price.replace(/[^0-9.]/g, '')) : 0,
+      currency: extractCurrency(item.price),
+      url: item.link,
+      rating: item.rating || 0,
+      reviews: item.ratingCount || 0,
+      image: item.imageUrl || ''
+    }))
+    .filter(r => r.price > 0)
+    .sort((a, b) => a.price - b.price);
 
     return {
       statusCode: 200,
       headers: CORS_HEADERS,
       body: JSON.stringify({
         success: true,
-        product: productName,
-        sourceStore,
+        product: title,
+        sourceStore: url ? new URL(url).hostname : 'unknown',
         results
       })
     };
@@ -47,64 +85,50 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ success: false, error: error.message })
     };
   }
 };
 
-function detectStore(url) {
-  const u = url.toLowerCase();
-  if (u.includes('noon.')) return 'noon';
-  if (u.includes('amazon.')) return 'amazon';
-  if (u.includes('aliexpress.')) return 'aliexpress';
-  if (u.includes('ebay.')) return 'ebay';
-  if (u.includes('temu.')) return 'temu';
-  if (u.includes('mumzworld.')) return 'mumzworld';
-  return null;
+// ===== Helper: أيقونة المتجر =====
+function getStoreIcon(source) {
+  if (!source) return '🏪';
+  const s = source.toLowerCase();
+  if (s.includes('amazon')) return '📦';
+  if (s.includes('noon')) return '🛍️';
+  if (s.includes('aliexpress')) return '🚀';
+  if (s.includes('ebay')) return '🏷️';
+  if (s.includes('temu')) return '🎁';
+  if (s.includes('mumzworld')) return '🍼';
+  if (s.includes('walmart')) return '🏬';
+  if (s.includes('target')) return '🎯';
+  if (s.includes('best buy')) return '💻';
+  return '🏪';
 }
 
-function extractProductName(url) {
-  try {
-    const path = new URL(url).pathname;
-    const segments = path.split('/').filter(Boolean);
-    let best = '';
-    for (const seg of segments) {
-      const cleaned = seg.replace(/\.html?$/, '').replace(/-/g, ' ');
-      if (cleaned.length > best.length && !cleaned.match(/^[A-Z0-9]{8,}$/)) {
-        best = cleaned;
-      }
-    }
-    return best || 'product';
-  } catch {
-    return 'product';
-  }
+// ===== Helper: لون المتجر =====
+function getStoreBg(source) {
+  if (!source) return '#f1f5f9';
+  const s = source.toLowerCase();
+  if (s.includes('amazon')) return '#fef3c7';
+  if (s.includes('noon')) return '#e0e7ff';
+  if (s.includes('aliexpress')) return '#fed7aa';
+  if (s.includes('ebay')) return '#dbeafe';
+  if (s.includes('temu')) return '#fde68a';
+  if (s.includes('mumzworld')) return '#fce7f3';
+  return '#f1f5f9';
 }
 
-async function searchProduct(productName, excludeStore) {
-  const ALL_STORES = [
-    { key: 'temu',       name: 'Temu',       icon: '🎁', bg: '#fde68a', domain: 'temu.com' },
-    { key: 'noon',       name: 'Noon',       icon: '🛍️', bg: '#e0e7ff', domain: 'noon.com' },
-    { key: 'amazon',     name: 'Amazon',     icon: '📦', bg: '#fef3c7', domain: 'amazon.ae' },
-    { key: 'aliexpress', name: 'AliExpress', icon: '🚀', bg: '#fed7aa', domain: 'aliexpress.com' },
-    { key: 'ebay',       name: 'eBay',       icon: '🏷️', bg: '#dbeafe', domain: 'ebay.com' },
-    { key: 'mumzworld',  name: 'Mumzworld',  icon: '🍼', bg: '#fce7f3', domain: 'mumzworld.com' }
-  ];
-
-  const stores = ALL_STORES.filter(s => s.key !== excludeStore);
-  const basePrice = 80 + Math.floor(Math.random() * 40);
-
-  const results = stores.map(s => {
-    const variation = 0.85 + Math.random() * 0.35;
-    return {
-      store: s.key,
-      name: s.name,
-      icon: s.icon,
-      bg: s.bg,
-      price: Math.round(basePrice * variation),
-      currency: 'USD',
-      url: `https://${s.domain}/search?q=${encodeURIComponent(productName)}`
-    };
-  });
-
-  return results.sort((a, b) => a.price - b.price);
+// ===== Helper: استخراج العملة =====
+function extractCurrency(priceStr) {
+  if (!priceStr) return '$';
+  if (priceStr.includes('AED') || priceStr.includes('د.إ')) return 'AED';
+  if (priceStr.includes('SAR') || priceStr.includes('ر.س')) return 'SAR';
+  if (priceStr.includes('EGP') || priceStr.includes('ج.م')) return 'EGP';
+  if (priceStr.includes('DZD') || priceStr.includes('د.ج')) return 'DZD';
+  if (priceStr.includes('MAD') || priceStr.includes('د.م')) return 'MAD';
+  if (priceStr.includes('USD') || priceStr.includes('$')) return '$';
+  if (priceStr.includes('EUR') || priceStr.includes('€')) return '€';
+  if (priceStr.includes('GBP') || priceStr.includes('£')) return '£';
+  return '$';
 }
