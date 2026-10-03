@@ -1,5 +1,4 @@
 // netlify/functions/compare.js
-const fetch = require('node-fetch');
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +32,7 @@ exports.handler = async (event) => {
 
     const SERPER_KEY = process.env.SERPER_API_KEY;
 
-    // استدعاء Serper API للبحث في Google Shopping
+    // استخدام fetch المدمج في Node 18+
     const serperResponse = await fetch('https://google.serper.dev/shopping', {
       method: 'POST',
       headers: {
@@ -55,7 +54,6 @@ exports.handler = async (event) => {
     const serperData = await serperResponse.json();
     const shoppingResults = serperData.shopping || [];
 
-    // تحويل النتائج إلى التنسيق المطلوب
     const results = shoppingResults.map(item => ({
       name: item.source || 'Store',
       icon: getStoreIcon(item.source),
@@ -90,7 +88,6 @@ exports.handler = async (event) => {
   }
 };
 
-// ===== Helper: أيقونة المتجر =====
 function getStoreIcon(source) {
   if (!source) return '🏪';
   const s = source.toLowerCase();
@@ -106,7 +103,6 @@ function getStoreIcon(source) {
   return '🏪';
 }
 
-// ===== Helper: لون المتجر =====
 function getStoreBg(source) {
   if (!source) return '#f1f5f9';
   const s = source.toLowerCase();
@@ -119,7 +115,6 @@ function getStoreBg(source) {
   return '#f1f5f9';
 }
 
-// ===== Helper: استخراج العملة =====
 function extractCurrency(priceStr) {
   if (!priceStr) return '$';
   if (priceStr.includes('AED') || priceStr.includes('د.إ')) return 'AED';
