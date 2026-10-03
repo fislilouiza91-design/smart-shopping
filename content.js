@@ -12,10 +12,9 @@
       brand: 'Shopping Assistant',
       loading: 'Comparing prices...',
       cheapest: 'Cheapest',
-      offersTitle: 'Available offers',
       reviews: (n) => `${n} reviews`,
       aiTitle: '🤖 AI Analysis',
-      aiText: 'Product has good reviews. Hover over any store to see all offers.',
+      aiText: 'Prices from Google Shopping. Click any offer to visit the store.',
       errorServer: 'Connection failed.',
       errorNoResults: 'No results found.',
       close: 'Close'
@@ -25,10 +24,9 @@
       brand: 'مساعد التسوق',
       loading: 'جاري مقارنة الأسعار...',
       cheapest: 'الأرخص',
-      offersTitle: 'العروض المتاحة',
       reviews: (n) => `${n} مراجعة`,
       aiTitle: '🤖 تحليل ذكي',
-      aiText: 'منتج بتقييم جيد. حوّم على أي متجر لعرض جميع العروض.',
+      aiText: 'الأسعار من Google Shopping. اضغط على أي عرض لزيارة المتجر.',
       errorServer: 'تعذر الاتصال.',
       errorNoResults: 'لا توجد نتائج.',
       close: 'إغلاق'
@@ -38,10 +36,9 @@
       brand: 'Assistant Shopping',
       loading: 'Comparaison des prix...',
       cheapest: 'Moins cher',
-      offersTitle: 'Offres disponibles',
       reviews: (n) => `${n} avis`,
       aiTitle: '🤖 Analyse IA',
-      aiText: 'Produit bien noté. Survolez un magasin pour voir toutes les offres.',
+      aiText: 'Prix de Google Shopping. Cliquez sur une offre pour visiter le magasin.',
       errorServer: 'Connexion échouée.',
       errorNoResults: 'Aucun résultat.',
       close: 'Fermer'
@@ -51,10 +48,9 @@
       brand: 'Asistente de Compras',
       loading: 'Comparando precios...',
       cheapest: 'Más barato',
-      offersTitle: 'Ofertas disponibles',
       reviews: (n) => `${n} reseñas`,
       aiTitle: '🤖 Análisis IA',
-      aiText: 'Producto bien valorado. Pasa el cursor sobre una tienda.',
+      aiText: 'Precios de Google Shopping. Haz clic para visitar la tienda.',
       errorServer: 'Conexión fallida.',
       errorNoResults: 'Sin resultados.',
       close: 'Cerrar'
@@ -64,10 +60,9 @@
       brand: 'Einkaufsassistent',
       loading: 'Preise werden verglichen...',
       cheapest: 'Günstigster',
-      offersTitle: 'Verfügbare Angebote',
       reviews: (n) => `${n} Bewertungen`,
       aiTitle: '🤖 KI-Analyse',
-      aiText: 'Gut bewertetes Produkt. Fahren Sie über ein Geschäft.',
+      aiText: 'Preise von Google Shopping. Klicken Sie für mehr.',
       errorServer: 'Verbindung fehlgeschlagen.',
       errorNoResults: 'Keine Ergebnisse.',
       close: 'Schließen'
@@ -113,13 +108,12 @@
   }
 
   // ============================================
-  // URL pattern check — THE MAIN GATE
+  // URL pattern check
   // ============================================
   function isProductUrl(store) {
     const url = location.href.toLowerCase();
     const path = location.pathname.toLowerCase();
 
-    // استبعاد صفحات البحث والفئات والسلة والحساب
     const excludePatterns = [
       '/s?', '/search', '/sch/', '/w/wholesale',
       '/category/', '/categories/', '/catalog/', '/browse/',
@@ -127,18 +121,13 @@
       '/user/', '/deals', '/offers', '/listing',
       '/cart', '/checkout', '/account', '/login', '/signup',
       '/help', '/about', '/contact', '/blog', '/news',
-      '?q=', '&q=', '?query=', '&query=',
-      '?page=', '&page=', '?p=', '&p='
+      '?q=', '&q=', '?query=', '&query='
     ];
 
     for (const p of excludePatterns) {
-      if (url.includes(p)) {
-        console.log('[Smart Shopping] ❌ Excluded by pattern:', p);
-        return false;
-      }
+      if (url.includes(p)) return false;
     }
 
-    // أنماط صفحات المنتج لكل متجر
     const productPatterns = {
       amazon: [/\/dp\//, /\/gp\/product\//, /\/product\//, /\/ASIN\//],
       noon: [/\/p\/$/, /\/p\/\?/, /\/[a-z0-9-]+\/N[A-Z0-9]{6,}/i],
@@ -150,13 +139,8 @@
 
     const patterns = productPatterns[store] || [];
     for (const regex of patterns) {
-      if (regex.test(path) || regex.test(url)) {
-        console.log('[Smart Shopping] ✅ URL matches product pattern for', store);
-        return true;
-      }
+      if (regex.test(path) || regex.test(url)) return true;
     }
-
-    console.log('[Smart Shopping] ❌ URL does not match product pattern for', store);
     return false;
   }
 
@@ -166,86 +150,32 @@
   function getProductData() {
     const store = detectStore();
     if (!store) return null;
-
-    // ✅ البوابة الوحيدة: URL
     if (!isProductUrl(store)) return null;
 
     const selectors = {
       amazon: {
-        title: [
-          '#productTitle',
-          'h1#title',
-          'h1.product-title-word-break',
-          '[data-feature-name="title"] h1'
-        ],
-        price: [
-          '.a-price-whole',
-          '#priceblock_ourprice',
-          '#priceblock_dealprice',
-          '.a-price .a-offscreen',
-          '.priceToPay .a-offscreen'
-        ]
+        title: ['#productTitle', 'h1#title', 'h1.product-title-word-break'],
+        price: ['.a-price-whole', '#priceblock_ourprice', '.a-price .a-offscreen']
       },
       noon: {
-        title: [
-          'h1[data-qa="product-title"]',
-          'h1[data-qa="pdp-title"]',
-          '.productTitle',
-          'h1.productTitle'
-        ],
-        price: [
-          '[data-qa="price-now"]',
-          '[data-qa="price"]',
-          '.priceNow'
-        ]
+        title: ['h1[data-qa="product-title"]', '.productTitle', 'h1.productTitle'],
+        price: ['[data-qa="price-now"]', '.priceNow']
       },
       aliexpress: {
-        title: [
-          'h1[data-pl="product-title"]',
-          '.product-title-text',
-          'h1.product-title'
-        ],
-        price: [
-          '.product-price-value',
-          '.es--wrap--erdmPRe span',
-          '.price--currentPriceText--V8_y_b5',
-          '[class*="product-price-current"]'
-        ]
+        title: ['h1[data-pl="product-title"]', '.product-title-text', 'h1.product-title'],
+        price: ['.product-price-value', '.es--wrap--erdmPRe span']
       },
       ebay: {
-        title: [
-          '.x-item-title__mainTitle .ux-textspans',
-          'h1.it-ttl',
-          'h1.x-item-title__mainTitle'
-        ],
-        price: [
-          '.x-price-primary .ux-textspans',
-          '#prcIsum',
-          '[data-testid="x-price-primary"]'
-        ]
+        title: ['.x-item-title__mainTitle .ux-textspans', 'h1.it-ttl'],
+        price: ['.x-price-primary .ux-textspans', '#prcIsum']
       },
       temu: {
-        title: [
-          'h1[class*="title"]',
-          '[class*="ProductTitle"]',
-          'h1'
-        ],
-        price: [
-          '[class*="price"] span',
-          '[class*="Price"] span'
-        ]
+        title: ['h1[class*="title"]', '[class*="ProductTitle"]', 'h1'],
+        price: ['[class*="price"] span']
       },
       mumzworld: {
-        title: [
-          'h1.product-name',
-          '.page-title h1',
-          'h1[itemprop="name"]'
-        ],
-        price: [
-          '.product-info-main .price',
-          '[data-price-type="finalPrice"]',
-          '[itemprop="price"]'
-        ]
+        title: ['h1.product-name', 'h1[itemprop="name"]'],
+        price: ['.product-info-main .price', '[itemprop="price"]']
       }
     };
 
@@ -261,7 +191,6 @@
       return null;
     }
 
-    // العنوان: Selectors مخصصة → og:title → document.title
     let title = tryList(selectors[store].title);
     if (!title) {
       const ogTitle = document.querySelector('meta[property="og:title"]');
@@ -273,44 +202,11 @@
       title = document.title.split('|')[0].split(' - ')[0].trim();
     }
 
-    // السعر: اختياري، إذا لم يوجد نضع "—"
     let price = tryList(selectors[store].price) || '—';
 
-    if (!title || title.length < 3) {
-      console.log('[Smart Shopping] ❌ No valid title found');
-      return null;
-    }
+    if (!title || title.length < 3) return null;
 
-    console.log('[Smart Shopping] ✅ Product detected:', { store, title: title.slice(0, 50), price });
     return { store, title, price, url: location.href };
-  }
-
-  // ============================================
-  // Generate offers (simulated)
-  // ============================================
-  function generateOffers(store, basePrice) {
-    const sellers = {
-      temu: ['Temu Official', 'Top Store', 'Mega Deals', 'Global Shop', 'Best Buy', 'Premium Store', 'Smart Shop', 'Fast Delivery'],
-      noon: ['Noon Express', 'Noon Mart', 'Official Store', 'Prime Seller', 'Best Choice', 'Top Rated', 'Mega Store', 'Global Mart'],
-      amazon: ['Amazon.ae', 'Amazon Warehouse', 'Sold by ABC', 'Sold by XYZ', 'Best Seller', 'Prime Store', 'Top Vendor', 'Mega Mart'],
-      aliexpress: ['Official Store', 'Top Seller', 'Gold Supplier', 'Verified Store', 'Trusted Shop', 'Elite Vendor', 'Mega Factory', 'Direct Store'],
-      ebay: ['Top Rated Seller', 'eBay Official', 'Gold Seller', 'Premium Store', 'Trusted Vendor', 'Mega Deals', 'Best Offer', 'Global Seller'],
-      mumzworld: ['Mumzworld', 'Official Store', 'Top Seller', 'Premium Shop', 'Best Choice', 'Trusted Vendor', 'Mega Store', 'Value Shop']
-    };
-
-    const list = sellers[store] || sellers.amazon;
-    const count = 10;
-
-    // إذا لم يكن هناك سعر أساسي، استخدم قيمة افتراضية
-    const base = parseFloat(basePrice) || 50;
-
-    return Array.from({ length: count }, (_, i) => {
-      const variation = 1 + (i * 0.012) + (Math.random() * 0.02);
-      const price = Math.round(base * variation * 100) / 100;
-      const rating = (3.9 + Math.random()).toFixed(1);
-      const reviews = Math.floor(100 + Math.random() * 3000);
-      return { seller: list[i % list.length], price, rating, reviews };
-    }).sort((a, b) => a.price - b.price);
   }
 
   // ============================================
@@ -379,15 +275,12 @@
 
     function moveDrag(clientX, clientY) {
       if (!isDragging) return;
-
       let newLeft = clientX - offsetX;
       let newTop = clientY - offsetY;
-
       const maxLeft = window.innerWidth - el.offsetWidth;
       const maxTop = window.innerHeight - el.offsetHeight;
       newLeft = Math.max(0, Math.min(newLeft, maxLeft));
       newTop = Math.max(0, Math.min(newTop, maxTop));
-
       el.style.left = newLeft + 'px';
       el.style.top = newTop + 'px';
     }
@@ -398,12 +291,8 @@
       el.style.transition = '';
       el.style.pointerEvents = '';
       document.body.style.userSelect = '';
-
       const rect = el.getBoundingClientRect();
-      localStorage.setItem('ssw_position', JSON.stringify({
-        left: rect.left,
-        top: rect.top
-      }));
+      localStorage.setItem('ssw_position', JSON.stringify({ left: rect.left, top: rect.top }));
     }
 
     handle.addEventListener('mousedown', (e) => {
@@ -411,7 +300,6 @@
       startDrag(e.clientX, e.clientY);
       e.preventDefault();
     });
-
     document.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
     document.addEventListener('mouseup', endDrag);
 
@@ -421,14 +309,12 @@
       startDrag(t.clientX, t.clientY);
       e.preventDefault();
     }, { passive: false });
-
     document.addEventListener('touchmove', (e) => {
       if (!isDragging) return;
       const t = e.touches[0];
       moveDrag(t.clientX, t.clientY);
       e.preventDefault();
     }, { passive: false });
-
     document.addEventListener('touchend', endDrag);
   }
 
@@ -443,69 +329,40 @@
       return;
     }
 
-    const stores = results.map((r, i) => ({
-      ...r,
-      offers: generateOffers(r.store, r.price),
-      isCheapest: i === 0
-    }));
+    const rowsHTML = results.map((r, i) => {
+      const isCheapest = i === 0;
+      const starsHTML = r.rating ? `<span class="ssw-stars">★ ${r.rating}</span>` : '';
+      const reviewsHTML = r.reviews ? `<span class="ssw-reviews">(${r.reviews})</span>` : '';
 
-    const storesHTML = stores.map((s) => `
-      <div class="ssw-store-row ${s.isCheapest ? 'ssw-best' : ''}">
-        <div class="ssw-store-left">
-          <span class="ssw-store-name">${s.name}</span>
-          ${s.isCheapest ? `<span class="ssw-badge">${T.cheapest}</span>` : ''}
-        </div>
-        <span class="ssw-store-price">${s.price} ${s.currency || '$'}</span>
-
-        <div class="ssw-offers">
-          <div class="ssw-offers-title">${T.offersTitle}</div>
-          ${s.offers.map(o => `
-            <a class="ssw-offer" href="${s.url}" target="_blank" rel="noopener">
-              <div class="ssw-offer-left">
-                <span class="ssw-offer-seller">${o.seller}</span>
-                <span class="ssw-offer-meta">
-                  <span class="ssw-offer-stars">★ ${o.rating}</span> · ${T.reviews(o.reviews)}
-                </span>
-              </div>
-              <span class="ssw-offer-price">${o.price} ${s.currency || '$'}</span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    `).join('');
+      return `
+        <a class="ssw-store-row ${isCheapest ? 'ssw-best' : ''}" href="${r.url}" target="_blank" rel="noopener">
+          <div class="ssw-store-left">
+            <span class="ssw-store-name">${r.seller}</span>
+            ${isCheapest ? `<span class="ssw-badge">${T.cheapest}</span>` : ''}
+            ${starsHTML}
+            ${reviewsHTML}
+          </div>
+          <span class="ssw-store-price">${r.priceFormatted || r.price}</span>
+        </a>
+      `;
+    }).join('');
 
     box.querySelector('.ssw-body').innerHTML = `
       <div class="ssw-product-title">${data.product}</div>
-      ${storesHTML}
+      <div class="ssw-stores">${rowsHTML}</div>
       <div class="ssw-ai">
         <div class="ssw-ai-title">${T.aiTitle}</div>
         <div>${T.aiText}</div>
       </div>
     `;
-
-    box.querySelectorAll('.ssw-store-row').forEach(row => {
-      row.addEventListener('click', (e) => {
-        if (e.target.closest('.ssw-offer')) return;
-        if (window.matchMedia('(hover: none)').matches) {
-          const isOpen = row.classList.contains('ssw-open');
-          box.querySelectorAll('.ssw-store-row').forEach(r => r.classList.remove('ssw-open'));
-          if (!isOpen) row.classList.add('ssw-open');
-        }
-      });
-    });
   }
 
   // ============================================
   // Run
   // ============================================
   async function run() {
-    console.log('[Smart Shopping] 🚀 Running on', location.href);
-
     const product = getProductData();
-    if (!product) {
-      console.log('[Smart Shopping] ⏭️ Skipped: not a product page');
-      return;
-    }
+    if (!product) return;
 
     const lang = await getEffectiveLanguage();
     const T = translations[lang];
