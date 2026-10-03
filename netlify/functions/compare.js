@@ -32,7 +32,6 @@ exports.handler = async (event) => {
 
     const SERPER_KEY = process.env.SERPER_API_KEY;
 
-    // استخدام fetch المدمج في Node 18+
     const serperResponse = await fetch('https://google.serper.dev/shopping', {
       method: 'POST',
       headers: {
@@ -54,19 +53,43 @@ exports.handler = async (event) => {
     const serperData = await serperResponse.json();
     const shoppingResults = serperData.shopping || [];
 
-    const results = shoppingResults.map(item => ({
-      name: item.source || 'Store',
-      icon: getStoreIcon(item.source),
-      bg: getStoreBg(item.source),
-      price: item.price ? parseFloat(item.price.replace(/[^0-9.]/g, '')) : 0,
-      currency: extractCurrency(item.price),
-      url: item.link,
-      rating: item.rating || 0,
-      reviews: item.ratingCount || 0,
-      image: item.imageUrl || ''
-    }))
-    .filter(r => r.price > 0)
-    .sort((a, b) => a.price - b.price);
+    // تحويل وتحسين النتائج
+    const rawResults = shoppingResults
+      .map(item => {
+        const price = item.price ? parseFloat(item.price.replace(/[^0-9.]/g, '')) : 0;
+        if (!price) return null;
+
+        const currency = extractCurrency(item.price);
+        const seller = cleanSellerName(item.source || 'Store');
+
+        return {
+          seller,
+          price,
+          currency,
+          priceFormatted: formatPrice(price, currency),
+          url: item.link,
+          rating: item.rating || 0,
+          reviews: item.ratingCount || 0,
+          image: item.imageUrl || '',
+          icon: getStoreIcon(seller),
+          bg: getStoreBg(seller)
+        };
+      })
+      .filter(Boolean);
+
+    // إزالة التكرار: نحتفظ بأرخص عرض لكل بائع
+    const uniqueMap = new Map();
+    for (const r of rawResults) {
+      const key = r.seller.toLowerCase();
+      if (!uniqueMap.has(key) || uniqueMap.get(key).price > r.price) {
+        uniqueMap.set(key, r);
+      }
+    }
+
+    // ترتيب حسب السعر (الأرخص أولاً)
+    const results = Array.from(uniqueMap.values())
+      .sort((a, b) => a.price - b.price)
+      .slice(0, 12);
 
     return {
       statusCode: 200,
@@ -88,6 +111,46 @@ exports.handler = async (event) => {
   }
 };
 
+// ===== Helper: تنسيق السعر مع الرمز في المكان الصحيح =====
+function formatPrice(amount, currency) {
+  const value = amount.toFixed(2);
+  switch (currency) {
+    case 'USD': return `$${value}`;
+    case 'EUR': return `€${value}`;
+    case 'GBP': return `£${value}`;
+    case 'AED': return `AED ${value}`;
+    case 'SAR': return `SAR ${value}`;
+    case 'EGP': return `EGP ${value}`;
+    case 'DZD': return `DZD ${value}`;
+    case 'MAD': return `MAD ${value}`;
+    default:    return `${value} ${currency}`;
+  }
+}
+
+// ===== Helper: تنظيف اسم البائع =====
+function cleanSellerName(name) {
+  return name
+    .replace(/\s*-\s*Seller$/i, '')
+    .replace(/\s*Seller$/i, '')
+    .replace(/\s*Store$/i, '')
+    .trim() || 'Store';
+}
+
+// ===== Helper: استخراج العملة =====
+function extractCurrency(priceStr) {
+  if (!priceStr) return 'USD';
+  const s = priceStr.toUpperCase();
+  if (s.includes('AED')) return 'AED';
+  if (s.includes('SAR')) return 'SAR';
+  if (s.includes('EGP')) return 'EGP';
+  if (s.includes('DZD')) return 'DZD';
+  if (s.includes('MAD')) return 'MAD';
+  if (s.includes('EUR') || s.includes('€')) return 'EUR';
+  if (s.includes('GBP') || s.includes('£')) return 'GBP';
+  return 'USD';
+}
+
+// ===== Helper: أيقونة المتجر =====
 function getStoreIcon(source) {
   if (!source) return '🏪';
   const s = source.toLowerCase();
@@ -98,11 +161,10 @@ function getStoreIcon(source) {
   if (s.includes('temu')) return '🎁';
   if (s.includes('mumzworld')) return '🍼';
   if (s.includes('walmart')) return '🏬';
-  if (s.includes('target')) return '🎯';
-  if (s.includes('best buy')) return '💻';
   return '🏪';
 }
 
+// ===== Helper: لون المتجر =====
 function getStoreBg(source) {
   if (!source) return '#f1f5f9';
   const s = source.toLowerCase();
@@ -113,17 +175,4 @@ function getStoreBg(source) {
   if (s.includes('temu')) return '#fde68a';
   if (s.includes('mumzworld')) return '#fce7f3';
   return '#f1f5f9';
-}
-
-function extractCurrency(priceStr) {
-  if (!priceStr) return '$';
-  if (priceStr.includes('AED') || priceStr.includes('د.إ')) return 'AED';
-  if (priceStr.includes('SAR') || priceStr.includes('ر.س')) return 'SAR';
-  if (priceStr.includes('EGP') || priceStr.includes('ج.م')) return 'EGP';
-  if (priceStr.includes('DZD') || priceStr.includes('د.ج')) return 'DZD';
-  if (priceStr.includes('MAD') || priceStr.includes('د.م')) return 'MAD';
-  if (priceStr.includes('USD') || priceStr.includes('$')) return '$';
-  if (priceStr.includes('EUR') || priceStr.includes('€')) return '€';
-  if (priceStr.includes('GBP') || priceStr.includes('£')) return '£';
-  return '$';
 }
