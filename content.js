@@ -112,34 +112,111 @@
     return null;
   }
 
+  // ============================================
+  // Product data detection (Enhanced)
+  // ============================================
   function getProductData() {
     const store = detectStore();
     if (!store) return null;
 
     const selectors = {
       amazon: {
-        title: ['#productTitle', 'h1#title'],
-        price: ['.a-price-whole', '#priceblock_ourprice']
+        title: [
+          '#productTitle',
+          'h1#title',
+          'h1.product-title-word-break',
+          '[data-feature-name="title"] h1',
+          '#title span'
+        ],
+        price: [
+          '.a-price-whole',
+          '#priceblock_ourprice',
+          '#priceblock_dealprice',
+          '.a-price .a-offscreen',
+          '#price_inside_buybox',
+          '.priceToPay .a-offscreen'
+        ]
       },
       noon: {
-        title: ['h1[data-qa="product-title"]', '.productTitle'],
-        price: ['[data-qa="price-now"]', '.priceNow']
+        title: [
+          'h1[data-qa="product-title"]',
+          'h1[data-qa="pdp-title"]',
+          '.productTitle',
+          'h1.productTitle',
+          '.ProductDetailsSection h1',
+          'h1[class*="ProductTitle"]'
+        ],
+        price: [
+          '[data-qa="price-now"]',
+          '[data-qa="price"]',
+          '.priceNow',
+          '.price',
+          '[class*="PriceNow"]',
+          '[class*="priceContainer"] span'
+        ]
       },
       aliexpress: {
-        title: ['h1[data-pl="product-title"]', '.product-title-text'],
-        price: ['.product-price-value', '.es--wrap--erdmPRe span']
+        title: [
+          'h1[data-pl="product-title"]',
+          '.product-title-text',
+          'h1.product-title',
+          '.pdp-title h1',
+          '[class*="product-title"] h1'
+        ],
+        price: [
+          '.product-price-value',
+          '.es--wrap--erdmPRe span',
+          '.price--currentPriceText--V8_y_b5',
+          '[class*="product-price-current"]',
+          '.pdp-comp-price-current'
+        ]
       },
       ebay: {
-        title: ['.x-item-title__mainTitle .ux-textspans', 'h1.it-ttl'],
-        price: ['.x-price-primary .ux-textspans']
+        title: [
+          '.x-item-title__mainTitle .ux-textspans',
+          'h1.it-ttl',
+          'h1.x-item-title__mainTitle',
+          '[data-testid="x-item-title"] h1',
+          '.vim h1'
+        ],
+        price: [
+          '.x-price-primary .ux-textspans',
+          '#prcIsum',
+          '[data-testid="x-price-primary"]',
+          '.vi-price .notranslate',
+          '.display-price'
+        ]
       },
       temu: {
-        title: ['h1[class*="title"]'],
-        price: ['[class*="price"] span']
+        title: [
+          'h1[class*="title"]',
+          '._2rn4tqXP h1',
+          '[class*="ProductTitle"]',
+          'h1[data-tid]',
+          'h1'
+        ],
+        price: [
+          '[class*="price"] span',
+          '._2rn4tqXP [class*="price"]',
+          '[class*="Price"] span',
+          '[data-tid*="price"]'
+        ]
       },
       mumzworld: {
-        title: ['h1.product-name'],
-        price: ['.product-info-main .price']
+        title: [
+          'h1.product-name',
+          '.page-title h1',
+          '[class*="productName"]',
+          'h1[itemprop="name"]',
+          '.product-info h1'
+        ],
+        price: [
+          '.product-info-main .price',
+          '[data-price-type="finalPrice"]',
+          '.price-final_price .price',
+          '[itemprop="price"]',
+          '[class*="specialPrice"]'
+        ]
       }
     };
 
@@ -147,17 +224,70 @@
       for (const sel of list) {
         try {
           const el = document.querySelector(sel);
-          if (el && el.textContent.trim()) return el.textContent.trim();
+          if (el && el.textContent.trim() && el.textContent.trim().length > 1) {
+            return el.textContent.trim();
+          }
         } catch (e) { }
       }
       return null;
     }
 
-    const title = tryList(selectors[store].title);
-    const price = tryList(selectors[store].price);
-    if (!title) return null;
+    let title = tryList(selectors[store].title);
+    let price = tryList(selectors[store].price);
 
+    if (!title) title = tryGenericTitle();
+    if (!price) price = tryGenericPrice();
+
+    if (!title) {
+      console.log('[Smart Shopping] Could not find product title on', location.href);
+      return null;
+    }
+
+    console.log('[Smart Shopping] Detected:', { store, title, price });
     return { store, title, price, url: location.href };
+  }
+
+  function tryGenericTitle() {
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle && ogTitle.content && ogTitle.content.length > 3) {
+      return ogTitle.content.trim();
+    }
+    const h1s = document.querySelectorAll('h1');
+    for (const h1 of h1s) {
+      const text = h1.textContent.trim();
+      if (text.length > 5 && text.length < 300) {
+        if (!h1.closest('header') && !h1.closest('nav')) {
+          return text;
+        }
+      }
+    }
+    const docTitle = document.title;
+    if (docTitle && docTitle.length > 3) {
+      return docTitle.split('|')[0].split(' - ')[0].trim();
+    }
+    return null;
+  }
+
+  function tryGenericPrice() {
+    const priceMeta = document.querySelector('[itemprop="price"]');
+    if (priceMeta) {
+      const content = priceMeta.getAttribute('content') || priceMeta.textContent;
+      if (content && /\d/.test(content)) return content.trim();
+    }
+
+    const priceRegex = /[\$€£¥₹]?\s?\d{1,3}(?:[.,]\d{2,3})?(?:\s?(?:USD|EUR|GBP|AED|SAR|DZD|MAD|EGP))?/;
+
+    const candidates = document.querySelectorAll(
+      '[class*="price" i], [class*="Price"], [id*="price" i], [data-price], [class*="amount"]'
+    );
+
+    for (const el of candidates) {
+      const text = el.textContent.trim();
+      if (text.length < 50 && priceRegex.test(text) && /\d/.test(text)) {
+        return text;
+      }
+    }
+    return null;
   }
 
   // ============================================
@@ -227,42 +357,81 @@
     return box;
   }
 
+  // ============================================
+  // Drag & Drop (Fixed - all directions)
+  // ============================================
   function makeDraggable(el, handle) {
-    let isDragging = false, startX, startY, startLeft, startTop;
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
 
-    handle.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.ssw-close')) return;
+    function startDrag(clientX, clientY) {
       isDragging = true;
       const rect = el.getBoundingClientRect();
-      startX = e.clientX;
-      startY = e.clientY;
-      startLeft = rect.left;
-      startTop = rect.top;
-      el.style.transition = 'none';
-      document.body.style.userSelect = 'none';
-      e.preventDefault();
-    });
+      offsetX = clientX - rect.left;
+      offsetY = clientY - rect.top;
 
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      const nl = Math.max(0, Math.min(startLeft + dx, window.innerWidth - el.offsetWidth));
-      const nt = Math.max(0, Math.min(startTop + dy, window.innerHeight - el.offsetHeight));
       el.style.bottom = 'auto';
       el.style.right = 'auto';
-      el.style.left = nl + 'px';
-      el.style.top = nt + 'px';
-    });
+      el.style.left = rect.left + 'px';
+      el.style.top = rect.top + 'px';
+      el.style.transition = 'none';
+      el.style.pointerEvents = 'none';
+      document.body.style.userSelect = 'none';
+    }
 
-    document.addEventListener('mouseup', () => {
+    function moveDrag(clientX, clientY) {
+      if (!isDragging) return;
+
+      let newLeft = clientX - offsetX;
+      let newTop = clientY - offsetY;
+
+      const maxLeft = window.innerWidth - el.offsetWidth;
+      const maxTop = window.innerHeight - el.offsetHeight;
+      newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+      newTop = Math.max(0, Math.min(newTop, maxTop));
+
+      el.style.left = newLeft + 'px';
+      el.style.top = newTop + 'px';
+    }
+
+    function endDrag() {
       if (!isDragging) return;
       isDragging = false;
       el.style.transition = '';
+      el.style.pointerEvents = '';
       document.body.style.userSelect = '';
+
       const rect = el.getBoundingClientRect();
-      localStorage.setItem('ssw_position', JSON.stringify({ left: rect.left, top: rect.top }));
+      localStorage.setItem('ssw_position', JSON.stringify({
+        left: rect.left,
+        top: rect.top
+      }));
+    }
+
+    handle.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.ssw-close')) return;
+      startDrag(e.clientX, e.clientY);
+      e.preventDefault();
     });
+
+    document.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+    document.addEventListener('mouseup', endDrag);
+
+    handle.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.ssw-close')) return;
+      const t = e.touches[0];
+      startDrag(t.clientX, t.clientY);
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      const t = e.touches[0];
+      moveDrag(t.clientX, t.clientY);
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', endDrag);
   }
 
   // ============================================
@@ -316,7 +485,6 @@
       </div>
     `;
 
-    // Click toggle for mobile
     box.querySelectorAll('.ssw-store-row').forEach(row => {
       row.addEventListener('click', (e) => {
         if (e.target.closest('.ssw-offer')) return;
@@ -355,7 +523,6 @@
     );
   }
 
-  // Reload on language change
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes[STORAGE_KEY]) {
       const box = document.getElementById('smart-shopping-widget');
