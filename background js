@@ -1,9 +1,5 @@
-// background.js — Service Worker
-// يعمل في الخلفية ويستدعي Netlify Function للمقارنة
-
 const API_URL = 'https://tranquil-dodol-bf4a7b.netlify.app/.netlify/functions/compare';
 
-// ===== استقبال الرسائل من content.js =====
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'compare') {
     handleCompare(message.payload)
@@ -12,11 +8,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error('Compare error:', err);
         sendResponse({ success: false, error: err.message });
       });
-    return true; // يُبقي القناة مفتوحة للرد غير المتزامن
+    return true;
   }
 });
 
-// ===== استدعاء الدالة السحابية =====
 async function handleCompare(product) {
   const response = await fetch(API_URL, {
     method: 'POST',
@@ -36,9 +31,8 @@ async function handleCompare(product) {
   return await response.json();
 }
 
-// ===== رسالة عند التثبيت (اختياري) =====
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('✅ تم تثبيت مساعد التسوق الذكي');
+    console.log('Extension installed');
   }
 });
