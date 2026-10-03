@@ -1,4 +1,4 @@
-const API_URL = 'https://tranquil-dodol-bf4a7b.netlify.app/.netlify/functions/compare';
+const API_URL = 'https://smart-shopping-b1x.pages.dev/api/compare';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'compare') {
