@@ -3,7 +3,6 @@
   "name": "مساعد التسوق الذكي",
   "version": "1.0.0",
   "description": "قارن الأسعار، حلل المنتجات بالذكاء الاصطناعي، واكشف الكوبونات — تلقائياً على صفحات التسوق.",
-  "default_locale": "ar",
   "permissions": [
     "activeTab",
     "storage",
