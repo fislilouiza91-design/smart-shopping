@@ -4,12 +4,8 @@
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // Handle CORS preflight
   if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: getCorsHeaders()
-    });
+    return new Response(null, { status: 200, headers: getCorsHeaders() });
   }
 
   if (request.method !== 'POST') {
@@ -29,29 +25,31 @@ export async function onRequest(context) {
       );
     }
 
+    // ===== تنظيف العنوان لتحسين البحث =====
+    const cleanQuery = buildSearchQuery(title);
+    console.log('Original title:', title);
+    console.log('Clean query:', cleanQuery);
+
     const SERPER_KEY = env.SERPER_API_KEY;
 
-    const serperResponse = await fetch('https://google.serper.dev/shopping', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': SERPER_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        q: title,
-        gl: 'ae',
-        hl: 'en',
-        num: 10
-      })
-    });
+    // محاولة 1: بالعنوان الكامل
+    let shoppingResults = await searchSerper(cleanQuery, SERPER_KEY);
 
-    if (!serperResponse.ok) {
-      throw new Error('Serper API error: ' + serperResponse.status);
+    // محاولة 2: إذا لم نجد نتائج، استخدم كلمات أقل
+    if (!shoppingResults.length && cleanQuery.split(' ').length > 3) {
+      const shortQuery = cleanQuery.split(' ').slice(0, 3).join(' ');
+      console.log('Retry with shorter query:', shortQuery);
+      shoppingResults = await searchSerper(shortQuery, SERPER_KEY);
     }
 
-    const serperData = await serperResponse.json();
-    const shoppingResults = serperData.shopping || [];
+    // محاولة 3: إذا لم نجد نتائج، جرب أول كلمتين
+    if (!shoppingResults.length) {
+      const tinyQuery = cleanQuery.split(' ').slice(0, 2).join(' ');
+      console.log('Retry with tiny query:', tinyQuery);
+      shoppingResults = await searchSerper(tinyQuery, SERPER_KEY);
+    }
 
+    // معالجة النتائج
     const rawResults = shoppingResults
       .map(item => {
         const price = item.price ? parseFloat(item.price.replace(/[^0-9.]/g, '')) : 0;
@@ -89,6 +87,7 @@ export async function onRequest(context) {
       JSON.stringify({
         success: true,
         product: title,
+        searchQuery: cleanQuery,
         sourceStore: url ? new URL(url).hostname : 'unknown',
         results
       }),
@@ -104,8 +103,55 @@ export async function onRequest(context) {
   }
 }
 
-// ===== Helper Functions =====
+// ===== استدعاء Serper =====
+async function searchSerper(query, apiKey) {
+  const response = await fetch('https://google.serper.dev/shopping', {
+    method: 'POST',
+    headers: {
+      'X-API-KEY': apiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      q: query,
+      gl: 'ae',
+      hl: 'en',
+      num: 20
+    })
+  });
 
+  if (!response.ok) {
+    console.error('Serper error status:', response.status);
+    return [];
+  }
+
+  const data = await response.json();
+  return data.shopping || [];
+}
+
+// ===== تنظيف العنوان لبناء استعلام بحث =====
+function buildSearchQuery(title) {
+  if (!title) return '';
+
+  let cleaned = title
+    // إزالة الأقواس ومحتواها
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    // إزالة الرموز الخاصة
+    .replace(/[|\\\/_\-+*#@!?.,;:&'"%~^`{}\[\]<>]/g, ' ')
+    // إزالة الأرقام المفردة الطويلة (مثل: 1005011963005739)
+    .replace(/\b\d{8,}\b/g, ' ')
+    // إزالة الأحرف المتكررة
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // خذ أول 6 كلمات فقط
+  const words = cleaned.split(' ').filter(w => w.length > 1);
+  const limited = words.slice(0, 6).join(' ');
+
+  return limited || title.slice(0, 60);
+}
+
+// ===== Helper Functions =====
 function getCorsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
