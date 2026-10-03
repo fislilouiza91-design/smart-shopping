@@ -113,22 +113,27 @@
   }
 
   // ============================================
-  // URL pattern check (product page only)
+  // URL pattern check — THE MAIN GATE
   // ============================================
   function isProductUrl(store) {
     const url = location.href.toLowerCase();
     const path = location.pathname.toLowerCase();
 
-    // استبعاد صفحات البحث والفئات
+    // استبعاد صفحات البحث والفئات والسلة والحساب
     const excludePatterns = [
-      '/s?', '/search', '?q=', '&q=', '/category/', '/catalog/',
-      '/w/wholesale', '/browse/', '/collection/', '/c/', '/store/',
-      '/brand/', '/seller/', '/user/', '/deals', '/offers', '?page=',
-      '/cart', '/checkout', '/account', '/login', '/signup'
+      '/s?', '/search', '/sch/', '/w/wholesale',
+      '/category/', '/categories/', '/catalog/', '/browse/',
+      '/collection/', '/store/', '/brand/', '/seller/',
+      '/user/', '/deals', '/offers', '/listing',
+      '/cart', '/checkout', '/account', '/login', '/signup',
+      '/help', '/about', '/contact', '/blog', '/news',
+      '?q=', '&q=', '?query=', '&query=',
+      '?page=', '&page=', '?p=', '&p='
     ];
+
     for (const p of excludePatterns) {
       if (url.includes(p)) {
-        console.log('[Smart Shopping] Excluded by pattern:', p);
+        console.log('[Smart Shopping] ❌ Excluded by pattern:', p);
         return false;
       }
     }
@@ -136,21 +141,22 @@
     // أنماط صفحات المنتج لكل متجر
     const productPatterns = {
       amazon: [/\/dp\//, /\/gp\/product\//, /\/product\//, /\/ASIN\//],
-      noon: [/\/p\//, /\/product\//, /\/[a-z0-9-]+\/N[A-Z0-9]+/i],
+      noon: [/\/p\/$/, /\/p\/\?/, /\/[a-z0-9-]+\/N[A-Z0-9]{6,}/i],
       aliexpress: [/\/item\//, /\/i\/\d+/],
       ebay: [/\/itm\//, /\/p\/\d+/],
       temu: [/\/g\//, /\/goods/, /-g-\d+/, /\/product/],
-      mumzworld: [/\/[a-z0-9-]+\.html$/, /\/product\//, /\/p\//]
+      mumzworld: [/\.html$/]
     };
 
     const patterns = productPatterns[store] || [];
     for (const regex of patterns) {
       if (regex.test(path) || regex.test(url)) {
+        console.log('[Smart Shopping] ✅ URL matches product pattern for', store);
         return true;
       }
     }
 
-    console.log('[Smart Shopping] URL does not match product pattern for', store);
+    console.log('[Smart Shopping] ❌ URL does not match product pattern for', store);
     return false;
   }
 
@@ -161,7 +167,7 @@
     const store = detectStore();
     if (!store) return null;
 
-    // ✅ فحص 1: يجب أن يكون URL صفحة منتج
+    // ✅ البوابة الوحيدة: URL
     if (!isProductUrl(store)) return null;
 
     const selectors = {
@@ -170,15 +176,13 @@
           '#productTitle',
           'h1#title',
           'h1.product-title-word-break',
-          '[data-feature-name="title"] h1',
-          '#title span'
+          '[data-feature-name="title"] h1'
         ],
         price: [
           '.a-price-whole',
           '#priceblock_ourprice',
           '#priceblock_dealprice',
           '.a-price .a-offscreen',
-          '#price_inside_buybox',
           '.priceToPay .a-offscreen'
         ]
       },
@@ -187,80 +191,60 @@
           'h1[data-qa="product-title"]',
           'h1[data-qa="pdp-title"]',
           '.productTitle',
-          'h1.productTitle',
-          '.ProductDetailsSection h1',
-          'h1[class*="ProductTitle"]'
+          'h1.productTitle'
         ],
         price: [
           '[data-qa="price-now"]',
           '[data-qa="price"]',
-          '.priceNow',
-          '.price',
-          '[class*="PriceNow"]',
-          '[class*="priceContainer"] span'
+          '.priceNow'
         ]
       },
       aliexpress: {
         title: [
           'h1[data-pl="product-title"]',
           '.product-title-text',
-          'h1.product-title',
-          '.pdp-title h1',
-          '[class*="product-title"] h1'
+          'h1.product-title'
         ],
         price: [
           '.product-price-value',
           '.es--wrap--erdmPRe span',
           '.price--currentPriceText--V8_y_b5',
-          '[class*="product-price-current"]',
-          '.pdp-comp-price-current'
+          '[class*="product-price-current"]'
         ]
       },
       ebay: {
         title: [
           '.x-item-title__mainTitle .ux-textspans',
           'h1.it-ttl',
-          'h1.x-item-title__mainTitle',
-          '[data-testid="x-item-title"] h1',
-          '.vim h1'
+          'h1.x-item-title__mainTitle'
         ],
         price: [
           '.x-price-primary .ux-textspans',
           '#prcIsum',
-          '[data-testid="x-price-primary"]',
-          '.vi-price .notranslate',
-          '.display-price'
+          '[data-testid="x-price-primary"]'
         ]
       },
       temu: {
         title: [
           'h1[class*="title"]',
-          '._2rn4tqXP h1',
           '[class*="ProductTitle"]',
-          'h1[data-tid]',
           'h1'
         ],
         price: [
           '[class*="price"] span',
-          '._2rn4tqXP [class*="price"]',
-          '[class*="Price"] span',
-          '[data-tid*="price"]'
+          '[class*="Price"] span'
         ]
       },
       mumzworld: {
         title: [
           'h1.product-name',
           '.page-title h1',
-          '[class*="productName"]',
-          'h1[itemprop="name"]',
-          '.product-info h1'
+          'h1[itemprop="name"]'
         ],
         price: [
           '.product-info-main .price',
           '[data-price-type="finalPrice"]',
-          '.price-final_price .price',
-          '[itemprop="price"]',
-          '[class*="specialPrice"]'
+          '[itemprop="price"]'
         ]
       }
     };
@@ -277,39 +261,32 @@
       return null;
     }
 
+    // العنوان: Selectors مخصصة → og:title → document.title
     let title = tryList(selectors[store].title);
-    let price = tryList(selectors[store].price);
+    if (!title) {
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle && ogTitle.content && ogTitle.content.length > 3) {
+        title = ogTitle.content.trim();
+      }
+    }
+    if (!title) {
+      title = document.title.split('|')[0].split(' - ')[0].trim();
+    }
 
-    // ✅ فحص 2: يجب أن يوجد سعر (شرط أساسي لصفحة منتج)
-    if (!price) {
-      console.log('[Smart Shopping] No price found on', location.href);
+    // السعر: اختياري، إذا لم يوجد نضع "—"
+    let price = tryList(selectors[store].price) || '—';
+
+    if (!title || title.length < 3) {
+      console.log('[Smart Shopping] ❌ No valid title found');
       return null;
     }
 
-    // إذا فشل العنوان، استخدم og:title
-    if (!title) {
-      title = tryGenericTitle();
-    }
-
-    if (!title) {
-      console.log('[Smart Shopping] Could not find product title');
-      return null;
-    }
-
-    console.log('[Smart Shopping] ✅ Detected:', { store, title, price });
+    console.log('[Smart Shopping] ✅ Product detected:', { store, title: title.slice(0, 50), price });
     return { store, title, price, url: location.href };
   }
 
-  function tryGenericTitle() {
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle && ogTitle.content && ogTitle.content.length > 3) {
-      return ogTitle.content.trim();
-    }
-    return null;
-  }
-
   // ============================================
-  // Generate offers
+  // Generate offers (simulated)
   // ============================================
   function generateOffers(store, basePrice) {
     const sellers = {
@@ -324,9 +301,12 @@
     const list = sellers[store] || sellers.amazon;
     const count = 10;
 
+    // إذا لم يكن هناك سعر أساسي، استخدم قيمة افتراضية
+    const base = parseFloat(basePrice) || 50;
+
     return Array.from({ length: count }, (_, i) => {
       const variation = 1 + (i * 0.012) + (Math.random() * 0.02);
-      const price = Math.round(basePrice * variation * 100) / 100;
+      const price = Math.round(base * variation * 100) / 100;
       const rating = (3.9 + Math.random()).toFixed(1);
       const reviews = Math.floor(100 + Math.random() * 3000);
       return { seller: list[i % list.length], price, rating, reviews };
@@ -519,9 +499,11 @@
   // Run
   // ============================================
   async function run() {
+    console.log('[Smart Shopping] 🚀 Running on', location.href);
+
     const product = getProductData();
     if (!product) {
-      console.log('[Smart Shopping] Skipped: not a product page');
+      console.log('[Smart Shopping] ⏭️ Skipped: not a product page');
       return;
     }
 
