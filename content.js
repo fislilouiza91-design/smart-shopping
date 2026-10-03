@@ -12,11 +12,10 @@
       brand: 'Shopping Assistant',
       loading: 'Comparing prices...',
       cheapest: 'Cheapest',
-      productMeta: (s, o) => `${s} stores · ${o} offers found`,
       offersTitle: 'Available offers',
       reviews: (n) => `${n} reviews`,
       aiTitle: '🤖 AI Analysis',
-      aiText: 'Product has good reviews. Hover over any store to see all available offers with seller and rating.',
+      aiText: 'Product has good reviews. Hover over any store to see all offers.',
       errorServer: 'Connection failed.',
       errorNoResults: 'No results found.',
       close: 'Close'
@@ -26,11 +25,10 @@
       brand: 'مساعد التسوق',
       loading: 'جاري مقارنة الأسعار...',
       cheapest: 'الأرخص',
-      productMeta: (s, o) => `${s} متاجر · ${o} عرض متاح`,
       offersTitle: 'العروض المتاحة',
       reviews: (n) => `${n} مراجعة`,
       aiTitle: '🤖 تحليل ذكي',
-      aiText: 'منتج بتقييم جيد. حوّم على أي متجر لعرض جميع العروض مع البائع والتقييم.',
+      aiText: 'منتج بتقييم جيد. حوّم على أي متجر لعرض جميع العروض.',
       errorServer: 'تعذر الاتصال.',
       errorNoResults: 'لا توجد نتائج.',
       close: 'إغلاق'
@@ -40,11 +38,10 @@
       brand: 'Assistant Shopping',
       loading: 'Comparaison des prix...',
       cheapest: 'Moins cher',
-      productMeta: (s, o) => `${s} magasins · ${o} offres`,
       offersTitle: 'Offres disponibles',
       reviews: (n) => `${n} avis`,
       aiTitle: '🤖 Analyse IA',
-      aiText: 'Produit bien noté. Survolez un magasin pour voir toutes les offres avec vendeur et note.',
+      aiText: 'Produit bien noté. Survolez un magasin pour voir toutes les offres.',
       errorServer: 'Connexion échouée.',
       errorNoResults: 'Aucun résultat.',
       close: 'Fermer'
@@ -54,11 +51,10 @@
       brand: 'Asistente de Compras',
       loading: 'Comparando precios...',
       cheapest: 'Más barato',
-      productMeta: (s, o) => `${s} tiendas · ${o} ofertas`,
       offersTitle: 'Ofertas disponibles',
       reviews: (n) => `${n} reseñas`,
       aiTitle: '🤖 Análisis IA',
-      aiText: 'Producto bien valorado. Pasa el cursor sobre una tienda para ver todas las ofertas.',
+      aiText: 'Producto bien valorado. Pasa el cursor sobre una tienda.',
       errorServer: 'Conexión fallida.',
       errorNoResults: 'Sin resultados.',
       close: 'Cerrar'
@@ -68,11 +64,10 @@
       brand: 'Einkaufsassistent',
       loading: 'Preise werden verglichen...',
       cheapest: 'Günstigster',
-      productMeta: (s, o) => `${s} Geschäfte · ${o} Angebote`,
       offersTitle: 'Verfügbare Angebote',
       reviews: (n) => `${n} Bewertungen`,
       aiTitle: '🤖 KI-Analyse',
-      aiText: 'Gut bewertetes Produkt. Fahren Sie über ein Geschäft für alle Angebote.',
+      aiText: 'Gut bewertetes Produkt. Fahren Sie über ein Geschäft.',
       errorServer: 'Verbindung fehlgeschlagen.',
       errorNoResults: 'Keine Ergebnisse.',
       close: 'Schließen'
@@ -212,7 +207,7 @@
     box.innerHTML = `
       <div class="ssw-header" id="sswHeader">
         <div class="ssw-brand">
-          <div class="ssw-brand-icon">🛒</div>
+          <span class="ssw-brand-icon">🛒</span>
           <span>${T.brand}</span>
         </div>
         <button class="ssw-close" aria-label="${T.close}">✕</button>
@@ -287,19 +282,14 @@
       isCheapest: i === 0
     }));
 
-    const totalOffers = stores.reduce((s, x) => s + x.offers.length, 0);
-
     const storesHTML = stores.map((s) => `
-      <div class="ssw-store ${s.isCheapest ? 'ssw-best' : ''}" data-store="${s.store}">
+      <div class="ssw-store-row ${s.isCheapest ? 'ssw-best' : ''}">
         <div class="ssw-store-left">
-          <span class="ssw-store-icon" style="background:${s.bg}">${s.icon}</span>
           <span class="ssw-store-name">${s.name}</span>
           ${s.isCheapest ? `<span class="ssw-badge">${T.cheapest}</span>` : ''}
         </div>
-        <div class="ssw-store-right">
-          <span class="ssw-store-count">${s.offers.length}</span>
-          <span class="ssw-store-price">${s.price} ${s.currency || '$'}</span>
-        </div>
+        <span class="ssw-store-price">${s.price} ${s.currency || '$'}</span>
+
         <div class="ssw-offers">
           <div class="ssw-offers-title">${T.offersTitle}</div>
           ${s.offers.map(o => `
@@ -318,10 +308,7 @@
     `).join('');
 
     box.querySelector('.ssw-body').innerHTML = `
-      <div class="ssw-product">
-        <div class="ssw-product-name">${data.product}</div>
-        <div class="ssw-product-meta">${T.productMeta(stores.length, totalOffers)}</div>
-      </div>
+      <div class="ssw-product-title">${data.product}</div>
       ${storesHTML}
       <div class="ssw-ai">
         <div class="ssw-ai-title">${T.aiTitle}</div>
@@ -329,14 +316,14 @@
       </div>
     `;
 
-    // Click toggle for mobile (no hover)
-    box.querySelectorAll('.ssw-store').forEach(store => {
-      store.addEventListener('click', (e) => {
+    // Click toggle for mobile
+    box.querySelectorAll('.ssw-store-row').forEach(row => {
+      row.addEventListener('click', (e) => {
         if (e.target.closest('.ssw-offer')) return;
         if (window.matchMedia('(hover: none)').matches) {
-          const isOpen = store.classList.contains('ssw-open');
-          box.querySelectorAll('.ssw-store').forEach(s => s.classList.remove('ssw-open'));
-          if (!isOpen) store.classList.add('ssw-open');
+          const isOpen = row.classList.contains('ssw-open');
+          box.querySelectorAll('.ssw-store-row').forEach(r => r.classList.remove('ssw-open'));
+          if (!isOpen) row.classList.add('ssw-open');
         }
       });
     });
