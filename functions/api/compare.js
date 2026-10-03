@@ -25,31 +25,21 @@ export async function onRequest(context) {
       );
     }
 
-    // ===== تنظيف العنوان لتحسين البحث =====
     const cleanQuery = buildSearchQuery(title);
-    console.log('Original title:', title);
-    console.log('Clean query:', cleanQuery);
-
     const SERPER_KEY = env.SERPER_API_KEY;
 
-    // محاولة 1: بالعنوان الكامل
     let shoppingResults = await searchSerper(cleanQuery, SERPER_KEY);
 
-    // محاولة 2: إذا لم نجد نتائج، استخدم كلمات أقل
     if (!shoppingResults.length && cleanQuery.split(' ').length > 3) {
       const shortQuery = cleanQuery.split(' ').slice(0, 3).join(' ');
-      console.log('Retry with shorter query:', shortQuery);
       shoppingResults = await searchSerper(shortQuery, SERPER_KEY);
     }
 
-    // محاولة 3: إذا لم نجد نتائج، جرب أول كلمتين
     if (!shoppingResults.length) {
       const tinyQuery = cleanQuery.split(' ').slice(0, 2).join(' ');
-      console.log('Retry with tiny query:', tinyQuery);
       shoppingResults = await searchSerper(tinyQuery, SERPER_KEY);
     }
 
-    // معالجة النتائج
     const rawResults = shoppingResults
       .map(item => {
         const price = item.price ? parseFloat(item.price.replace(/[^0-9.]/g, '')) : 0;
@@ -57,12 +47,13 @@ export async function onRequest(context) {
 
         const currency = extractCurrency(item.price);
         const seller = cleanSellerName(item.source || 'Store');
+        const usdPrice = convertToUSD(price, currency);
 
         return {
           seller,
-          price,
-          currency,
-          priceFormatted: formatPrice(price, currency),
+          price: usdPrice,
+          currency: 'USD',
+          priceFormatted: formatPrice(usdPrice, 'USD'),
           url: item.link,
           rating: item.rating || 0,
           reviews: item.ratingCount || 0,
@@ -103,7 +94,6 @@ export async function onRequest(context) {
   }
 }
 
-// ===== استدعاء Serper =====
 async function searchSerper(query, apiKey) {
   const response = await fetch('https://google.serper.dev/shopping', {
     method: 'POST',
@@ -128,30 +118,37 @@ async function searchSerper(query, apiKey) {
   return data.shopping || [];
 }
 
-// ===== تنظيف العنوان لبناء استعلام بحث =====
 function buildSearchQuery(title) {
   if (!title) return '';
-
   let cleaned = title
-    // إزالة الأقواس ومحتواها
     .replace(/\([^)]*\)/g, ' ')
     .replace(/\[[^\]]*\]/g, ' ')
-    // إزالة الرموز الخاصة
     .replace(/[|\\\/_\-+*#@!?.,;:&'"%~^`{}\[\]<>]/g, ' ')
-    // إزالة الأرقام المفردة الطويلة (مثل: 1005011963005739)
     .replace(/\b\d{8,}\b/g, ' ')
-    // إزالة الأحرف المتكررة
     .replace(/\s+/g, ' ')
     .trim();
 
-  // خذ أول 6 كلمات فقط
   const words = cleaned.split(' ').filter(w => w.length > 1);
   const limited = words.slice(0, 6).join(' ');
-
   return limited || title.slice(0, 60);
 }
 
-// ===== Helper Functions =====
+// ===== تحويل العملة إلى الدولار =====
+function convertToUSD(amount, fromCurrency) {
+  const rates = {
+    'USD': 1.00,
+    'AED': 0.2723,
+    'SAR': 0.2666,
+    'EGP': 0.0206,
+    'DZD': 0.0075,
+    'MAD': 0.0995,
+    'EUR': 1.09,
+    'GBP': 1.27
+  };
+  const rate = rates[fromCurrency] || 1;
+  return Math.round(amount * rate * 100) / 100;
+}
+
 function getCorsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
